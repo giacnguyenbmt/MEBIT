@@ -1,3 +1,4 @@
+from operator import gt
 import re
 import os
 
@@ -73,6 +74,7 @@ class Evaluation:
                                 self.points_list[j][i + 1])
                                 for j in range(len(self.points_list)) 
                                 for i in range(0, 8, 2)]
+
         elif self.model_type == 'treg':
             self.transcriptions_list = []
             evaluationParams = {
@@ -93,6 +95,11 @@ class Evaluation:
                     else:
                         m = re.search(r"'(.+)'",line)
                     self.transcriptions_list.append(m.group()[1:-1])
+
+        elif self.model_type == 'clsf':
+            with open(self.gt_path, 'r') as file:
+                gt_file = file.read().replace('\n', '')
+                self.transcriptions_list = gt_file
 
     def save_images(self):
         for i, img in enumerate(self.transformed_image):
@@ -384,6 +391,13 @@ class Evaluation:
             "accuracy": acc,
             "levenshtein": levenshtein_distance
         }
+    
+    def evaluate_clsf(self, predicted_sample):
+        acc = 1 if self.transcriptions_list==predicted_sample else 0
+        return {
+            "accuracy": acc,
+        }
+        
 
     def create_original_input(self):
         if self.model_type == 'tdet':
@@ -392,7 +406,7 @@ class Evaluation:
                 'boxes': self.current_points_list,
                 'texts': self.transcriptions_list
             }
-        elif self.model_type == 'treg':
+        elif self.model_type in ['treg', 'clsf']:
             self.test_original_image()
 
     def create_input(self, image_generator):
@@ -402,14 +416,17 @@ class Evaluation:
                 'boxes': self.current_points_list,
                 'texts': self.transcriptions_list
             }
-        elif self.model_type == 'treg':
+        elif self.model_type in ['treg', 'clsf']:
             next(image_generator)
 
-    def make_report(self, option):
-        print("{}: \n{} = {} \n({})".format(option,
-                                               self.report[option]['message'],
-                                               self.report[option]['value'],
-                                               self.report[option]['note']))
+    def make_report(self, option, verbose=1):
+        message = "{}: \n{} = {} \n({})".format(option,
+                                                self.report[option]['message'],
+                                                self.report[option]['value'],
+                                                self.report[option]['note'])
+        if verbose == 1:
+            print(message)
+        return message
 
     def check(self, metrics, threshold, criterion="precision"):
         if self.stop_generator is True:
@@ -436,7 +453,7 @@ class Evaluation:
         inference_function: a function receive our test input and give
         coresponding predicted sample.
         convert_output_function: this function converts your model 
-        output according our format
+        output according our format.
         option: ["blurring", 
                  "increasing_brightness", 
                  "increasing_contrast", 
@@ -504,7 +521,7 @@ class Evaluation:
         inference_function: a function receive our test input and give
         coresponding predicted sample.
         convert_output_function: this function converts your model 
-        output according our format
+        output according our format.
         option: ["blurring", 
                  "increasing_brightness", 
                  "increasing_contrast", 
@@ -559,3 +576,70 @@ class Evaluation:
 
         ## Step 3
         self.make_report(option)
+
+    def clsf_stats(self,
+                   inference_function,
+                   convert_output_function,
+                   option,
+                   save_image=False,
+                   verbose=0):
+
+        """
+        Parameter:
+        inference_function: a function receive our test input and give
+        coresponding predicted sample.
+        convert_output_function: this function converts your model 
+        output according our format.
+        option: ["blurring", 
+                 "increasing_brightness", 
+                 "increasing_contrast", 
+                 "decreasing_brightness", 
+                 "decreasing_contrast", 
+                 "down_scale"]
+        """
+        
+        self.model_type = 'clsf'
+        ## Step 1: check input image:
+        # Read orginal image and groundtruth
+        self.preprocess_input()
+
+        # infer original image
+        self.create_original_input()
+        predicted_sample = inference_function(self.current_img)
+        formated_sample = convert_output_function(predicted_sample)
+        # get metric
+        metrics = self.evaluate_clsf(formated_sample)
+
+        # check condition
+        if self.check(metrics, 0.5, "accuracy") is True:
+
+            ## Step 2: use corresponding generator
+            option_list = {"blurring": self.test_blurring(), 
+                           "increasing_brightness": self.test_increasing_brightness(), 
+                           "increasing_contrast": self.test_increasing_contrast(), 
+                           "decreasing_brightness": self.test_decreasing_brightness(), 
+                           "decreasing_contrast": self.test_decreasing_contrast(), 
+                           "down_scale": self.test_treg_scale()}
+            
+            # Get corresponding generator
+            image_generator = option_list.get(option, None)
+            if image_generator is None:
+                print("Invalid option")
+                return None
+
+            while True:
+                self.create_input(image_generator)
+
+                predicted_sample = inference_function(self.current_img)
+                formated_sample = convert_output_function(predicted_sample)
+                
+                metrics = self.evaluate_clsf(formated_sample)
+
+                if self.check(metrics, 0.5, "accuracy") is False:
+                    self.update_report(option)
+                    if save_image == True:
+                        self.save_image('./result/' + option + '.jpg', self.current_img)
+                    break
+
+        ## Step 3
+        return self.make_report(option, verbose)
