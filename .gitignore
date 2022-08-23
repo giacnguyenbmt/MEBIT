@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Unexpected files/folders
+data/
+tdet_run.py
+treg_run.py
