@@ -16,11 +16,11 @@ class Evaluation:
     def __init__(self,
                  img_path,
                  gt_path,
-                 result_path='./result') -> None:
+                 image_color='rgb') -> None:
         self.img_path = img_path
         self.gt_path = gt_path
-        self.result_path = result_path
         self.stop_generator = False
+        self.image_color = image_color
         
         self.report = {
             "blurring": {
@@ -51,12 +51,17 @@ class Evaluation:
 
     def preprocess_input(self):
         # Create a folder to store result
-        if not os.path.exists(self.result_path):
-            os.makedirs(self.result_path)
+        if (not os.path.exists(self.result_image_path) 
+            and self.result_image_path is not None):
+            os.makedirs(self.result_image_path)
 
         # Read image
         BGR_img = cv2.imread(self.img_path)
-        self.img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
+        if self.image_color == 'rgb':
+            self.img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
+        elif self.image_color == 'bgr':
+            self.img = BGR_img
+
         self.height, self.width, _ = self.img.shape
 
         # Read ground truth
@@ -177,14 +182,26 @@ class Evaluation:
         blur_limit = 3
         while True:
             img = self.blur(blur_limit)
+
+            # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            # unique_value = np.unique(gray)
+
             self.current_img = img
             self.limit = blur_limit
             blur_limit += 2
             if self.model_type == 'tdet':
                 self.current_points_list = self.points_list
                 yield self.current_img, self.current_points_list
-            elif self.model_type == 'treg':
+            elif self.model_type in ['treg', 'clsf']:
                 yield self.current_img
+            
+            # if len(unique_value)  < 3:
+            #     print("Reached the limit of blurring test!")
+            #     self.stop_generator = True
+            if blur_limit > 2 * max(self.height, self.width):
+                print("Reached the limit of blurring test!")
+                self.stop_generator = True
+
 
     def test_increasing_brightness(self):
         brightness_limit = 0
@@ -196,11 +213,11 @@ class Evaluation:
             if self.model_type == 'tdet':
                 self.current_points_list = self.points_list
                 yield self.current_img, self.current_points_list
-            elif self.model_type == 'treg':
+            elif self.model_type in ['treg', 'clsf']:
                 yield self.current_img
 
             if brightness_limit > 1.0:
-                print("Reached the limit of brightness test!")
+                print("Reached the limit of the brightness test!")
                 self.stop_generator = True
 
     def test_increasing_contrast(self):
@@ -209,9 +226,6 @@ class Evaluation:
         while True:
             img = self.contrast(contrast_limit)
 
-            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            unique_value = np.unique(gray)
-
             self.current_img = img
             self.limit = contrast_limit
             amout += amout * 0.1
@@ -219,11 +233,11 @@ class Evaluation:
             if self.model_type == 'tdet':
                 self.current_points_list = self.points_list
                 yield self.current_img, self.current_points_list
-            elif self.model_type == 'treg':
+            elif self.model_type in ['treg', 'clsf']:
                 yield self.current_img
             
-            if len(unique_value)  < 3:
-                print("Reached the limit of contrast test!")
+            if contrast_limit > 255:
+                print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
     def test_decreasing_brightness(self):
@@ -236,11 +250,11 @@ class Evaluation:
             if self.model_type == 'tdet':
                 self.current_points_list = self.points_list
                 yield self.current_img, self.current_points_list
-            elif self.model_type == 'treg':
+            elif self.model_type in ['treg', 'clsf']:
                 yield self.current_img
 
-            if brightness_limit > 1.0:
-                print("Reached the limit of brightness test!")
+            if brightness_limit < -1.0:
+                print("Reached the limit of the brightness test!")
                 self.stop_generator = True
 
     def test_decreasing_contrast(self):
@@ -249,9 +263,6 @@ class Evaluation:
         while True:
             img = self.contrast(contrast_limit)
 
-            gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            unique_value = np.unique(gray)
-
             self.current_img = img
             self.limit = contrast_limit
             amout += amout * 0.1
@@ -259,11 +270,11 @@ class Evaluation:
             if self.model_type == 'tdet':
                 self.current_points_list = self.points_list
                 yield self.current_img, self.current_points_list
-            elif self.model_type == 'treg':
+            elif self.model_type in ['treg', 'clsf']:
                 yield self.current_img
             
-            if len(unique_value)  < 3:
-                print("Reached the limit of contrast test!")
+            if contrast_limit < -255:
+                print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
     def test_scale(self):
@@ -293,14 +304,15 @@ class Evaluation:
     def test_treg_scale(self):
         ratio = 0.9
         while True:
-            if ratio <= 0:
-                break
 
             img, _ = self.resize(ratio)
             self.current_img = img
 
             self.limit = ratio
             ratio -= 0.1
+
+            if ratio <= 0.11 or min(img.shape[:2]) < 3:
+                self.stop_generator = True
 
             yield self.current_img
 
@@ -426,7 +438,7 @@ class Evaluation:
                                                 self.report[option]['note'])
         if verbose == 1:
             print(message)
-        return message
+        return self.report[option]
 
     def check(self, metrics, threshold, criterion="precision"):
         if self.stop_generator is True:
@@ -447,7 +459,7 @@ class Evaluation:
                    option,
                    criterion="precision",
                    threshold=0.5,
-                   save_image=False):
+                   result_image_path=None):
         """
         Parameter:
         inference_function: a function receive our test input and give
@@ -463,6 +475,7 @@ class Evaluation:
         """
 
         self.model_type = 'tdet'
+        self.result_image_path = result_image_path
         ## Step 1: check input image:
         # Read orginal image and groundtruth
         self.preprocess_input()
@@ -501,8 +514,10 @@ class Evaluation:
 
                 if self.check(metrics, threshold, criterion) is False:
                     self.update_report(option)
-                    if save_image == True:
-                        self.save_image('./result/' + option + '.jpg', self.current_img)
+                    if result_image_path is not None:
+                        self.save_image(os.path.join(result_image_path,
+                                                     option + os.path.split(self.img_path)[-1]), 
+                                        self.current_img)
                     break
 
         ## Step 3
@@ -514,7 +529,7 @@ class Evaluation:
                    option,
                    criterion="accuracy",
                    threshold=0.5,
-                   save_image=False):
+                   result_image_path=None):
 
         """
         Parameter:
@@ -532,6 +547,7 @@ class Evaluation:
         
         self.model_type = 'treg'
         self.keypoints = []
+        self.result_image_path = result_image_path
         ## Step 1: check input image:
         # Read orginal image and groundtruth
         self.preprocess_input()
@@ -570,8 +586,10 @@ class Evaluation:
 
                 if self.check(metrics, threshold, criterion) is False:
                     self.update_report(option)
-                    if save_image == True:
-                        self.save_image('./result/' + option + '.jpg', self.current_img)
+                    if result_image_path is not None:
+                        self.save_image(os.path.join(result_image_path,
+                                                     option + os.path.split(self.img_path)[-1]), 
+                                        self.current_img)
                     break
 
         ## Step 3
@@ -581,9 +599,9 @@ class Evaluation:
                    inference_function,
                    convert_output_function,
                    option,
-                   save_image=False,
+                   result_image_path=None,
                    verbose=0):
-
+        
         """
         Parameter:
         inference_function: a function receive our test input and give
@@ -597,8 +615,10 @@ class Evaluation:
                  "decreasing_contrast", 
                  "down_scale"]
         """
-        
+
         self.model_type = 'clsf'
+        self.keypoints = []
+        self.result_image_path = result_image_path
         ## Step 1: check input image:
         # Read orginal image and groundtruth
         self.preprocess_input()
@@ -629,7 +649,7 @@ class Evaluation:
 
             while True:
                 self.create_input(image_generator)
-
+                
                 predicted_sample = inference_function(self.current_img)
                 formated_sample = convert_output_function(predicted_sample)
                 
@@ -637,8 +657,10 @@ class Evaluation:
 
                 if self.check(metrics, 0.5, "accuracy") is False:
                     self.update_report(option)
-                    if save_image == True:
-                        self.save_image('./result/' + option + '.jpg', self.current_img)
+                    if result_image_path is not None:
+                        self.save_image(os.path.join(result_image_path,
+                                                     option + os.path.split(self.img_path)[-1]), 
+                                        self.current_img)
                     break
 
         ## Step 3
