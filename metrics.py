@@ -112,7 +112,10 @@ class Evaluation:
             cv2.imwrite("./output/{}.jpg".format(i), new_img)
 
     def save_image(self, name, image):
-        new_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        if self.image_color == 'rgb':
+            new_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        else:
+            new_img = image
         cv2.imwrite(name, new_img)
 
     # =====================================================
@@ -148,9 +151,20 @@ class Evaluation:
         transformed_image = transform(image=self.img)["image"]
         return transformed_image
 
-    def random_crop(self):
-        ...
-        pass
+    def crop(self, h, w):
+        # RandomCrop
+        transform = A.Compose([
+            A.RandomCrop(height=h, 
+                width=w, 
+                p=1),
+        ], keypoint_params=A.KeypointParams(format='xy', 
+                                            remove_invisible=False))
+        transformed = transform(image=self.img, 
+                                keypoints=self.keypoints)
+        transformed_image = transformed['image']
+        transformed_groundtruth = transformed['keypoints']
+
+        return transformed_image, transformed_groundtruth
 
     def resize(self, ratio):
         h = int(self.height * ratio)
