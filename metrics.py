@@ -321,14 +321,14 @@ class Evaluation:
 
             img, _ = self.resize(ratio)
             self.current_img = img
-
             self.limit = ratio
+
             ratio -= 0.1
+
+            yield self.current_img
 
             if ratio <= 0.11 or min(img.shape[:2]) < 3:
                 self.stop_generator = True
-
-            yield self.current_img
 
     #======================================================
     def compute_accuracy(self, ground_truth, predictions, mode='per_char'):
@@ -528,7 +528,7 @@ class Evaluation:
 
                 if self.check(metrics, threshold, criterion) is False:
                     self.update_report(option)
-                    if result_image_path is not None:
+                    if result_image_path is not None and self.stop_generator is False:
                         self.save_image(os.path.join(result_image_path,
                                                      option + os.path.split(self.img_path)[-1]), 
                                         self.current_img)
@@ -600,7 +600,7 @@ class Evaluation:
 
                 if self.check(metrics, threshold, criterion) is False:
                     self.update_report(option)
-                    if result_image_path is not None:
+                    if result_image_path is not None and self.stop_generator is False:
                         self.save_image(os.path.join(result_image_path,
                                                      option + os.path.split(self.img_path)[-1]), 
                                         self.current_img)
@@ -671,7 +671,7 @@ class Evaluation:
 
                 if self.check(metrics, 0.5, "accuracy") is False:
                     self.update_report(option)
-                    if result_image_path is not None:
+                    if result_image_path is not None and self.stop_generator is False:
                         self.save_image(os.path.join(result_image_path,
                                                      option + os.path.split(self.img_path)[-1]), 
                                         self.current_img)
