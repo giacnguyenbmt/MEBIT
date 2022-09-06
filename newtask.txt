@@ -1,0 +1,5 @@
+report ket qua cua mo hinh clsf
+report huong dan sd dung class
+report theo chuan anh Tung huong dan
+
+lay ket qua truoc khi model chet

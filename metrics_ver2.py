@@ -32,45 +32,59 @@ class Evaluation:
                  image_color='rgb') -> None:
         self.img_path = img_path
         self.gt_path = gt_path
-        self.stop_generator = False
         self.image_color = image_color
+
+        self.stop_generator = False
+        self.keypoints = []
+        self.masks = []
+        self.bboxes = []
         
         self.report = {
             "blurring": {
                 'message': 'blur_limit', 
                 'value': 0, 
-                'note': 'higher is better'},
+                'note': 'higher is better',
+                'generator': self.test_blurring()},
             "increasing_brightness": {
                 'message': 'brightness_limit', 
                 'value': 0.0, 
-                'note': 'higher is better'},
+                'note': 'higher is better',
+                'generator': self.test_increasing_brightness()},
             "increasing_contrast": {
                 'message': 'contrast_limit', 
                 'value': 0.0, 
-                'note': 'higher is better'},
+                'note': 'higher is better',
+                'generator': self.test_increasing_contrast()},
             "decreasing_brightness": {
                 'message': 'brightness_limit', 
                 'value': 0.0, 
-                'note': 'lower is better'},
+                'note': 'lower is better',
+                'generator': self.test_decreasing_brightness()},
             "decreasing_contrast": {
                 'message': 'contrast_limit', 
                 'value': 0.0, 
-                'note': 'lower is better'},
+                'note': 'lower is better',
+                'generator': self.test_decreasing_contrast()},
             "down_scale": {
                 'message': 'max_ratio', 
                 'value': 1.0, 
-                'note': 'lower is better'},
+                'note': 'lower is better',
+                'generator': self.test_scale()},
             "crop": {
                 'message': 'alpha', 
                 'value': 1.0, 
-                'note': 'lower is better'},
+                'note': 'lower is better',
+                'generator': self.test_crop()},
         }
 
     def preprocess_input(self):
+        # check option
+        assert (self.option in self.report.keys()), 'Invalid option'
+
         # Create a folder to store result
-        if (not os.path.exists(self.result_image_path) 
-            and self.result_image_path is not None):
-            os.makedirs(self.result_image_path)
+        if self.result_image_path is not None:
+            if not os.path.exists(self.result_image_path):
+                os.makedirs(self.result_image_path)
 
         # Read image
         BGR_img = cv2.imread(self.img_path)
@@ -122,11 +136,9 @@ class Evaluation:
             with open(self.gt_path, 'r') as file:
                 gt_file = file.read().replace('\n', '')
                 self.transcriptions_list = gt_file
-
-    # def save_images(self):
-    #     for i, img in enumerate(self.transformed_image):
-    #         new_img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    #         cv2.imwrite("./output/{}.jpg".format(i), new_img)
+    
+    def get_generator(self, option):
+        return self.report.get(option).get('generator')
 
     def save_image(self, name, image):
         if self.image_color == 'rgb':
@@ -135,14 +147,32 @@ class Evaluation:
             new_img = image
         cv2.imwrite(name, new_img)
 
+    def save_images(self, data):
+        if self.result_image_path is not None:
+            if self.test_failed:
+                if len(data) == 1:
+                    _name = os.path.join(
+                        self.result_image_path,
+                        self.option \
+                        + os.path.split(self.img_path)[-1])
+                    self.save_image(_name, data[0])
+                else:
+                    for i, img in enumerate(data):
+                        _name = os.path.join(
+                            self.result_image_path,
+                            self.option \
+                            + "_{}_".format(i+1) \
+                            + os.path.split(self.img_path)[-1])
+                        self.save_image(_name, img)
+
     # =====================================================
     # ==============define transformation==================
     def blur(self, blur_limit):
         transform = A.Compose([
             A.Blur(blur_limit=(blur_limit, blur_limit + 1), p=1.0),
         ])
-        transformed_image = transform(image=self.img)["image"]
-        return transformed_image
+        transformed = transform(image=self.img)
+        return transformed
 
     def brightness(self, brightness_limit):
         transform = A.Compose([
@@ -154,8 +184,8 @@ class Evaluation:
                 always_apply=False, 
                 p=1.0),
         ])
-        transformed_image = transform(image=self.img)["image"]
-        return transformed_image
+        transformed = transform(image=self.img)
+        return transformed
 
     def contrast(self, contrast_limit):
         transform = A.Compose([
@@ -165,42 +195,42 @@ class Evaluation:
                 always_apply=False, 
                 p=1.0),
         ])
-        transformed_image = transform(image=self.img)["image"]
-        return transformed_image
+        transformed = transform(image=self.img)
+        return transformed
 
-    def crop(self, h, w):
-        # RandomCrop
-        transform = A.Compose([
-            A.RandomCrop(height=h, 
-                width=w, 
-                p=1),
-        ], keypoint_params=A.KeypointParams(format='xy', 
-                                            remove_invisible=False))
+    def crop(self, x_min, y_min, x_max, y_max):
+        transform = A.Compose(
+            [A.Crop(x_min, y_min, x_max, y_max)], 
+            keypoint_params=A.KeypointParams(format='xy', 
+                                            remove_invisible=False),
+            bbox_params=A.BboxParams(format='coco')
+        )
         transformed = transform(image=self.img, 
-                                keypoints=self.keypoints)
-        transformed_image = transformed['image']
-        transformed_groundtruth = transformed['keypoints']
-
-        return transformed_image, transformed_groundtruth
+                                masks=self.masks,
+                                keypoints=self.keypoints,
+                                bboxes=self.bboxes)
+        return transformed
 
     def resize(self, ratio):
         h = int(self.height * ratio)
         w = int(self.width * ratio)
 
-        transform = A.Compose([
-            A.Resize(height=h, 
+        transform = A.Compose(
+            [A.Resize(
+                height=h, 
                 width=w, 
                 interpolation=1, 
                 always_apply=False, 
-                p=1),
-        ], keypoint_params=A.KeypointParams(format='xy', 
-                                            remove_invisible=False))
+                p=1)], 
+            keypoint_params=A.KeypointParams(format='xy', 
+                                             remove_invisible=False),
+            bbox_params=A.BboxParams(format='coco')
+        )
         transformed = transform(image=self.img, 
-                                keypoints=self.keypoints)
-        transformed_image = transformed['image']
-        transformed_groundtruth = transformed['keypoints']
-
-        return transformed_image, transformed_groundtruth
+                                masks=self.masks,
+                                keypoints=self.keypoints,
+                                bboxes=self.bboxes)
+        return transformed
 
     #======================================================
     #==================COCO DATASET TOOL=================== 
@@ -250,25 +280,58 @@ class Evaluation:
         image_infos['categories'] = [
             {'id': 1, 'name': 'text'}
         ]
-
         return image_infos
 
-    def create_cocogt(self, img_path, gt, width, height):
-        # Create dict
-        coco_format = self.text_infos_to_coco_dict(img_path, gt, width, height)
-        
+    def albu_to_coco_dict(self, data, raw_gt):
+        image_infos = {
+            'images': [],
+            'annotations': [],
+            'categories': []
+        }
+
+        ann_id = 1
+        for img_id, img in enumerate(data):
+            image_infos['images'].append(
+                {
+                    'id': img_id + 1,
+                    'width': img.shape[1],
+                    'height': img.shape[0],
+                    'file_name': "data/alb_{}.jpg".format(img_id + 1)
+                }
+            )
+
+            for transformed_mask in raw_gt[img_id]['masks']:
+                mask_rle = mask.encode(np.asfortranarray(transformed_mask))
+                mask_rle['counts'] = mask_rle['counts'].decode('ascii')
+                ann = {
+                    "id": ann_id, 
+                    "image_id": img_id + 1, 
+                    "category_id": 1, 
+                    "segmentation": mask_rle, 
+                    "area": float(mask.area(mask_rle)),
+                    "bbox": mask.toBbox(mask_rle).tolist(), 
+                    "iscrowd": 0,
+                }
+                image_infos['annotations'].append(ann)
+                ann_id += 1
+
+        image_infos['categories'] = [
+            {'id': 1, 'name': 'text'}
+        ]
+        return image_infos
+
+    def create_cocogt(self, coco_format):        
         # convert to COCO class
         annotation_file = 'temp_gt.json'
         json_content = json.dumps(coco_format)
         with open(annotation_file, 'w') as file:
             file.write(json_content)
-        cocoGt=COCO(annotation_file)
+        with HiddenPrints():
+            cocoGt=COCO(annotation_file)
         os.remove(annotation_file)
-
         return cocoGt
 
     def tdet_result2coco(self, cocogt, res_file):
-        # Create COCO-format result
         img_id = list(cocogt.imgs.keys())[0]
         h, w = cocogt.imgs[img_id]['height'], cocogt.imgs[img_id]['width']
         boundary_result = res_file['boxes']
@@ -286,44 +349,25 @@ class Evaluation:
             }
             results.append(predict_seg)
 
-        cocodt=cocogt.loadRes(results)
+        with HiddenPrints():
+            cocodt=cocogt.loadRes(results)
         return cocodt
-    #======================================================
-    #==============split transformation test===============       
-    def test_original_image(self):
-        data = [self.img]
-        if self.model_type == 'tdet':
-            tdet_gt = {
-                'points_list': self.points_list,
-                'transcriptions_list': self.transcriptions_list
-            }
-            gt = self.create_cocogt(self.img_path, 
-                                    tdet_gt, 
-                                    self.height, 
-                                    self.width)
 
-        return data, gt
-        
+    #======================================================
+    #==============split transformation test===============    
     def test_blurring(self):
         blur_limit = 3
         while True:
-            img = self.blur(blur_limit)
+            transformed = self.blur(blur_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
 
-            # gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-            # unique_value = np.unique(gray)
-
-            self.current_img = img
             self.limit = blur_limit
             blur_limit += 2
-            if self.model_type == 'tdet':
-                self.current_points_list = self.points_list
-                yield self.current_img, self.current_points_list
-            elif self.model_type in ['treg', 'clsf']:
-                yield self.current_img
+
+            yield data, raw_gt
             
-            # if len(unique_value)  < 3:
-            #     print("Reached the limit of blurring test!")
-            #     self.stop_generator = True
             if blur_limit > 2 * max(self.height, self.width):
                 print("Reached the limit of blurring test!")
                 self.stop_generator = True
@@ -331,15 +375,15 @@ class Evaluation:
     def test_increasing_brightness(self):
         brightness_limit = 0
         while True:
-            img = self.brightness(brightness_limit)
-            self.current_img = img
+            transformed = self.brightness(brightness_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
             self.limit = brightness_limit
             brightness_limit += 0.1
-            if self.model_type == 'tdet':
-                self.current_points_list = self.points_list
-                yield self.current_img, self.current_points_list
-            elif self.model_type in ['treg', 'clsf']:
-                yield self.current_img
+
+            yield data, raw_gt
 
             if brightness_limit > 1.0:
                 print("Reached the limit of the brightness test!")
@@ -349,17 +393,16 @@ class Evaluation:
         contrast_limit = 0
         amout = 0.1
         while True:
-            img = self.contrast(contrast_limit)
+            transformed = self.contrast(contrast_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
 
-            self.current_img = img
             self.limit = contrast_limit
             amout += amout * 0.1
             contrast_limit += amout
-            if self.model_type == 'tdet':
-                self.current_points_list = self.points_list
-                yield self.current_img, self.current_points_list
-            elif self.model_type in ['treg', 'clsf']:
-                yield self.current_img
+
+            yield data, raw_gt
             
             if contrast_limit > 255:
                 print("Reached the limit of the contrast test!")
@@ -368,15 +411,15 @@ class Evaluation:
     def test_decreasing_brightness(self):
         brightness_limit = 0
         while True:
-            img = self.brightness(brightness_limit)
-            self.current_img = img
+            transformed = self.brightness(brightness_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
             self.limit = brightness_limit
             brightness_limit -= 0.1
-            if self.model_type == 'tdet':
-                self.current_points_list = self.points_list
-                yield self.current_img, self.current_points_list
-            elif self.model_type in ['treg', 'clsf']:
-                yield self.current_img
+
+            yield data, raw_gt
 
             if brightness_limit < -1.0:
                 print("Reached the limit of the brightness test!")
@@ -386,17 +429,16 @@ class Evaluation:
         contrast_limit = 0
         amout = 0.1
         while True:
-            img = self.contrast(contrast_limit)
+            transformed = self.contrast(contrast_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
 
-            self.current_img = img
             self.limit = contrast_limit
             amout += amout * 0.1
             contrast_limit -= amout
-            if self.model_type == 'tdet':
-                self.current_points_list = self.points_list
-                yield self.current_img, self.current_points_list
-            elif self.model_type in ['treg', 'clsf']:
-                yield self.current_img
+
+            yield data, raw_gt
             
             if contrast_limit < -255:
                 print("Reached the limit of the contrast test!")
@@ -405,49 +447,62 @@ class Evaluation:
     def test_scale(self):
         ratio = 0.9
         while True:
-            if ratio <= 0:
-                break
+            transformed = self.resize(ratio)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
 
-            img, new_keypoints = self.resize(ratio)
-            new_gt = [[new_keypoints[i][0], 
-                       new_keypoints[i][1],
-                       new_keypoints[i + 1][0],
-                       new_keypoints[i + 1][1],
-                       new_keypoints[i + 2][0],
-                       new_keypoints[i + 2][1],
-                       new_keypoints[i + 3][0],
-                       new_keypoints[i + 3][1]] 
-                       for i in range(0, len(new_keypoints), 4)]
-            self.current_img = img
-            self.current_points_list = new_gt
             self.limit = ratio
-
             ratio -= 0.1
 
-            yield self.current_img, self.current_points_list
+            yield data, raw_gt
 
-    def test_treg_scale(self):
-        ratio = 0.9
-        while True:
-
-            img, _ = self.resize(ratio)
-            self.current_img = img
-            self.limit = ratio
-
-            ratio -= 0.1
-
-            yield self.current_img
-
-            if ratio <= 0.11 or min(img.shape[:2]) < 3:
+            if ratio <= 0.11 or min(data[0].shape[:2]) < 3:
                 self.stop_generator = True
 
-    def test_tdet_crop(self):
-        ...
+    def test_crop(self):
+        # crop 9 parts of image according alpha
+        numerator = 5
+        denominator = 6
+
+        while True:
+
+            alpha = numerator / denominator
+            alpha_matrix = np.array([
+                [            0,             0,                 alpha,                 alpha],
+                [(1 - alpha)/2,             0, (1 - alpha)/2 + alpha,                 alpha],
+                [    1 - alpha,             0,                     1,                 alpha],
+                [            0, (1 - alpha)/2,                 alpha, (1 - alpha)/2 + alpha],
+                [(1 - alpha)/2, (1 - alpha)/2, (1 - alpha)/2 + alpha, (1 - alpha)/2 + alpha],
+                [    1 - alpha, (1 - alpha)/2,                     1, (1 - alpha)/2 + alpha],
+                [            0,     1 - alpha,                 alpha,                     1],
+                [(1 - alpha)/2,     1 - alpha, (1 - alpha)/2 + alpha,                     1],
+                [    1 - alpha,     1 - alpha,                     1,                     1],
+            ])
+            self.limit = alpha
+
+            data = []
+            raw_gt = []
+            new_coords = alpha_matrix * np.array([self.width, self.height, self.width, self.height])
+            new_coords = new_coords.astype(int)    
+
+            for _, coord in enumerate(new_coords):
+                transformed = self.crop(*coord)
+                data.append(transformed['image'])
+                del transformed['image']
+                raw_gt.append(transformed)
+            
+            denominator += 1
+
+            yield data, raw_gt
+
+            if denominator >= 15:
+                self.stop_generator = True
 
     #======================================================
     def compute_accuracy(self, ground_truth, predictions, mode='per_char'):
         """
-        Computes accuracy
+        Computes accuracy for text recognition
         :param ground_truth:
         :param predictions:
         :param display: Whether to print values to stdout
@@ -506,26 +561,28 @@ class Evaluation:
             accuracy.append(Levenshtein.distance(gt, predictions[i]))
         return np.mean(np.array(accuracy).astype(np.float32), axis=0)
 
-    def evaluate_tdet(self, predicted_sample, option):
-        if option == 'crop':
-            predicted_sample.evaluate()
-            predicted_sample.accumulate()
-            predicted_sample.summarize()
-            sample_metric = {
-                'AP' : predicted_sample.stats[0],
-                'AP.50' : predicted_sample.stats[1]
+    def evaluate_tdet(self, gt, dt):
+        if self.option == 'crop':
+            # run evaluation
+            with HiddenPrints():
+                cocoeval = COCOeval(gt, dt)
+                cocoeval.evaluate()
+                cocoeval.accumulate()
+                cocoeval.summarize()
+            metric = {
+                'AP' : cocoeval.stats[0],
+                'AP_50' : cocoeval.stats[1],
+                'AP_75' : cocoeval.stats[2]
             }
         else:
-            temp_func = script.evaluate_method_per_sample
-            sample_metric = temp_func(self.gt_sample, 
-                                    predicted_sample
-                            )
+            alias_func = script.evaluate_method_per_sample
+            metric = alias_func(gt, dt)
             # message = 'Metrics:\nprecision = {}\nrecall = {}\nhmean = {}'
             # print(message.format(sample_metric['precision'], 
             #       sample_metric['recall'], 
             #       sample_metric['hmean'])
             # )
-        return sample_metric
+        return metric
 
     def evaluate_treg(self, predicted_sample):
         acc = self.compute_accuracy(self.transcriptions_list, 
@@ -547,57 +604,133 @@ class Evaluation:
             "accuracy": acc,
         }
         
-
     def create_original_input(self):
+        data = [self.img]
         if self.model_type == 'tdet':
-            self.test_original_image()
-            self.gt_sample = {
-                'boxes': self.current_points_list,
-                'texts': self.transcriptions_list
-            }
+            if self.option == 'crop':
+                tdet_gt = {
+                    'points_list': self.points_list,
+                    'transcriptions_list': self.transcriptions_list
+                }
+                coco_format = self.text_infos_to_coco_dict(
+                    self.img_path, 
+                    tdet_gt, 
+                    self.width,
+                    self.height
+                )
+                gt = self.create_cocogt(coco_format)
+                # create masks from corresponding polygons
+                for id in gt.getAnnIds(imgIds=1):
+                    self.masks.append(gt.annToMask(gt.loadAnns(id)[0]))
+            else:
+                gt = {
+                    'boxes': self.points_list,
+                    'texts': self.transcriptions_list
+                }
+
         elif self.model_type in ['treg', 'clsf']:
-            self.test_original_image()
+            # self.test_original_image()
+            ...
+        
+        return data, gt
 
     def create_input(self, image_generator):
-        if self.model_type == 'tdet':
-            next(image_generator)
-            self.gt_sample = {
-                'boxes': self.current_points_list,
-                'texts': self.transcriptions_list
-            }
-        elif self.model_type in ['treg', 'clsf']:
-            next(image_generator)
+        """
+        format data according to model_type and option
+        """
+        
+        # Get data from generator
+        data, raw_gt = next(image_generator)
 
-    def make_report(self, option, verbose=1):
+        # Format data
+        if self.model_type == 'tdet':
+            if self.option == 'crop':
+                coco_format = self.albu_to_coco_dict(data, raw_gt)
+                gt = self.create_cocogt(coco_format)
+            elif self.option == "down_scale":
+                keypoints = raw_gt[0]['keypoints']
+                new_points_list = [[keypoints[i][0], 
+                                    keypoints[i][1],
+                                    keypoints[i + 1][0],
+                                    keypoints[i + 1][1],
+                                    keypoints[i + 2][0],
+                                    keypoints[i + 2][1],
+                                    keypoints[i + 3][0],
+                                    keypoints[i + 3][1]] 
+                                   for i in range(0, len(keypoints), 4)]
+                gt = {
+                    'boxes': new_points_list,
+                    'texts': self.transcriptions_list
+                }
+            else:
+                gt = {
+                    'boxes': self.points_list,
+                    'texts': self.transcriptions_list
+                }
+        elif self.model_type in ['treg', 'clsf']:
+            ...
+
+        return data, gt
+
+    def make_report(self, option, verbose=True):
         message = "{}: \n{} = {} \n({})".format(option,
                                                 self.report[option]['message'],
                                                 self.report[option]['value'],
                                                 self.report[option]['note'])
-        if verbose == 1:
+        if verbose is True:
             print(message)
         return self.report[option]
 
     def check(self, metrics, threshold, criterion="precision"):
-        if self.stop_generator is True:
-            return False
-        elif criterion == 'levenshtein':
+        self.test_failed = True
+        if criterion == 'levenshtein':
             if metrics[criterion] > threshold:
                 return False
         elif metrics[criterion] < threshold:
             return False
+        self.test_failed = False
+
+        if self.stop_generator is True:
+            return False
+
         return True
 
     def update_report(self, option):
         self.report[option]['value'] = self.limit
 
-    def fit(self, inference_function, convert_output_function, data):
-        predicted_result = inference_function(data)
-        converted_result = convert_output_function(predicted_result)
+    def fit(self, inference_function, convert_output_function, data, gt):
+        # get result from model
+        results = []
+        for _, img in enumerate(data):
+            predicted_result = inference_function(img)
+            converted_result = convert_output_function(predicted_result)
+            results.append(converted_result)
 
+        # format result
         if self.model_type == 'tdet':
             if self.option == 'crop':
-                
-
+                dt_list = []
+                for i, rs in enumerate(results):
+                    img_infos = gt.dataset['images'][i]
+                    img_id = img_infos['id']
+                    h, w = img_infos['height'], img_infos['width']
+                    for j, poly in enumerate(rs['boxes']):
+                        instance_seg = {
+                            "image_id": img_id,
+                            "category_id": 1,
+                            "segmentation": mask.frPyObjects(
+                                [poly], 
+                                h, w)[0],
+                            "score": rs['confidences'][j]
+                        }
+                        dt_list.append(instance_seg)
+                with HiddenPrints():
+                    dt = gt.loadRes(dt_list)
+            else:
+                dt = results[0]
+        elif self.model_type in ['treg', 'clsf']:
+            ...
+        return dt
 
     def tdet_stats(self,
                    inference_function,
@@ -605,7 +738,8 @@ class Evaluation:
                    option,
                    criterion="precision",
                    threshold=0.5,
-                   result_image_path=None):
+                   result_image_path=None,
+                   verbose=False):
         """
         Parameter:
         inference_function: a function receive our test input and give
@@ -617,72 +751,49 @@ class Evaluation:
                  "increasing_contrast", 
                  "decreasing_brightness", 
                  "decreasing_contrast", 
-                 "down_scale",
+                 "down_scale", 
                  "crop"]
         """
 
         self.model_type = 'tdet'
+        self.option = option
         self.result_image_path = result_image_path
-        ## Step 1: check input image:
-        # Read orginal image and groundtruth
+        # STEP 1: PREPROCESSING INPUT
+        # Read orginal image and its groundtruth
         self.preprocess_input()
 
-        # infer original image
-        self.create_original_input()
-        # them mask vao gt
-        predicted_sample = inference_function(self.current_img)
-        formated_sample = convert_output_function(predicted_sample)
-        # them mask vao det
-        if option == 'crop':
-            gt = {
-                'points_list' : self.points_list,
-                'transcriptions_list': self.transcriptions_list
-            }
-            self.cocogt = self.create_cocogt(self.img_path, gt, self.height, self.width)
-            self.cocodt = self.tdet_result2coco(self.cocogt, formated_sample)
-            formated_sample = COCOeval(self.cocogt, self.cocodt)
-            
-        # get metric
-        metrics = self.evaluate_tdet(formated_sample, option)
+        # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
+        # Create data which has format corresponding option
+        data, gt  = self.create_original_input()
 
-        # check condition
-        if self.check(metrics, threshold, criterion) is True:
+        # Conduct inference and format model result
+        dt = self.fit(inference_function, convert_output_function, data, gt)
 
-            ## Step 2: use corresponding generator
-            option_list = {"blurring": self.test_blurring(), 
-                           "increasing_brightness": self.test_increasing_brightness(), 
-                           "increasing_contrast": self.test_increasing_contrast(), 
-                           "decreasing_brightness": self.test_decreasing_brightness(), 
-                           "decreasing_contrast": self.test_decreasing_contrast(), 
-                           "down_scale": self.test_treg_scale(),
-                           "crop": ...}
-            
+        # Evaluate
+        metric = self.evaluate_tdet(gt, dt)
+
+        # STEP 3: TEST WITH CORRESPONDING OPTION
+        if self.check(metric, threshold, criterion):
             # Get corresponding generator
-            image_generator = option_list.get(option, None)
-            if image_generator is None:
-                print("Invalid option")
-                return None
+            image_generator = self.get_generator(option)
 
             while True:
-                self.create_input(image_generator)
-                # def pass through model
-                predicted_sample = inference_function(self.current_img)
-                formated_sample = convert_output_function(predicted_sample)
+                # Create data which has format corresponding option
+                data, gt = self.create_input(image_generator)
                 
-                # coco for tdet
-                metrics = self.evaluate(formated_sample)
+                # Conduct inference and format model result
+                dt = self.fit(inference_function, convert_output_function, data, gt)
 
-                # update check func
-                if self.check(metrics, threshold, criterion) is False:
+                # Evaluate
+                metric = self.evaluate_tdet(gt, dt)
+                if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
-                    if result_image_path is not None and self.stop_generator is False:
-                        self.save_image(os.path.join(result_image_path,
-                                                     option + os.path.split(self.img_path)[-1]), 
-                                        self.current_img)
+                    self.save_images(data)
                     break
-
-        ## Step 3
+                
         return self.make_report(option, verbose)
+
+'''
 
     def treg_stats(self,
                    inference_function,
@@ -709,7 +820,7 @@ class Evaluation:
         self.model_type = 'treg'
         self.keypoints = []
         self.result_image_path = result_image_path
-        ## Step 1: check input image:
+        ## Step 1: check input image
         # Read orginal image and groundtruth
         self.preprocess_input()
 
@@ -826,3 +937,5 @@ class Evaluation:
 
         ## Step 3
         return self.make_report(option, verbose)
+
+'''
