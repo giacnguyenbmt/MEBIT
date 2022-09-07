@@ -3,3 +3,6 @@ report huong dan sd dung class
 report theo chuan anh Tung huong dan
 
 lay ket qua truoc khi model chet
+them 1 so nhieu
+gui model ocr
+gui report

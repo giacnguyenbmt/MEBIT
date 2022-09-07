@@ -21,15 +21,6 @@ class HiddenPrints:
         sys.stdout.close()
         sys.stdout = self._original_stdout
 
-# # Disable
-# def blockPrint():
-#     sys.stdout = open(os.devnull, 'w')
-
-# # Restore
-# def enablePrint():
-#     sys.stdout = sys.__stdout__
-
-
 def find_bbox(polygon):
     x = min([polygon[i] for i in range(0, len(polygon), 2)])
     y = min([polygon[i] for i in range(1, len(polygon), 2)])

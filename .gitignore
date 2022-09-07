@@ -129,6 +129,6 @@ dmypy.json
 .pyre/
 
 # Unexpected files/folders
-data/
-tdet_run.py
-treg_run.py
+# data/
+# tdet_run.py
+# treg_run.py

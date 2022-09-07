@@ -111,7 +111,7 @@ class Evaluation:
                                 for j in range(len(self.points_list)) 
                                 for i in range(0, 8, 2)]
 
-        elif self.model_type == 'treg':
+        elif self.model_type == 'trecog':
             self.transcriptions_list = []
             evaluationParams = {
                 'SAMPLE_NAME_2_ID':'(?:word_)?([0-9]+).png',
@@ -561,42 +561,33 @@ class Evaluation:
             accuracy.append(Levenshtein.distance(gt, predictions[i]))
         return np.mean(np.array(accuracy).astype(np.float32), axis=0)
 
-    def evaluate_tdet(self, gt, dt):
-        if self.option == 'crop':
-            # run evaluation
-            with HiddenPrints():
-                cocoeval = COCOeval(gt, dt)
-                cocoeval.evaluate()
-                cocoeval.accumulate()
-                cocoeval.summarize()
+    def evaluate(self, gt, dt):
+        if self.model_type == 'tdet':
+            if self.option == 'crop':
+                # run evaluation
+                with HiddenPrints():
+                    cocoeval = COCOeval(gt, dt)
+                    cocoeval.evaluate()
+                    cocoeval.accumulate()
+                    cocoeval.summarize()
+                metric = {
+                    'AP' : cocoeval.stats[0],
+                    'AP_50' : cocoeval.stats[1],
+                    'AP_75' : cocoeval.stats[2]
+                }
+            else:
+                alias_func = script.evaluate_method_per_sample
+                metric = alias_func(gt, dt)
+                
+        elif self.model_type == 'trecog':
+            acc = self.compute_accuracy(gt, dt)
+            levenshtein_distance = self.compute_levenshtein(gt, dt)
             metric = {
-                'AP' : cocoeval.stats[0],
-                'AP_50' : cocoeval.stats[1],
-                'AP_75' : cocoeval.stats[2]
+                "accuracy": acc,
+                "levenshtein": levenshtein_distance
             }
-        else:
-            alias_func = script.evaluate_method_per_sample
-            metric = alias_func(gt, dt)
-            # message = 'Metrics:\nprecision = {}\nrecall = {}\nhmean = {}'
-            # print(message.format(sample_metric['precision'], 
-            #       sample_metric['recall'], 
-            #       sample_metric['hmean'])
-            # )
-        return metric
 
-    def evaluate_treg(self, predicted_sample):
-        acc = self.compute_accuracy(self.transcriptions_list, 
-                                    [predicted_sample])
-        levenshtein_distance = self.compute_levenshtein(self.transcriptions_list,
-                                                        [predicted_sample])
-        
-        message = 'Metrics:\naccuracy = {}\nlevenshtein = {}'
-        print(message.format(acc, levenshtein_distance))
-        
-        return {
-            "accuracy": acc,
-            "levenshtein": levenshtein_distance
-        }
+        return metric
     
     def evaluate_clsf(self, predicted_sample):
         acc = 1 if self.transcriptions_list==predicted_sample else 0
@@ -628,9 +619,11 @@ class Evaluation:
                     'texts': self.transcriptions_list
                 }
 
-        elif self.model_type in ['treg', 'clsf']:
-            # self.test_original_image()
-            ...
+        elif self.model_type == 'trecog':
+            if self.option == 'crop':
+                gt = self.transcriptions_list
+            else:
+                gt = self.transcriptions_list
         
         return data, gt
 
@@ -667,8 +660,11 @@ class Evaluation:
                     'boxes': self.points_list,
                     'texts': self.transcriptions_list
                 }
-        elif self.model_type in ['treg', 'clsf']:
-            ...
+        elif self.model_type  == 'trecog':
+            if self.option == 'crop':
+                gt = self.transcriptions_list * 9
+            else:
+                gt = self.transcriptions_list
 
         return data, gt
 
@@ -728,8 +724,11 @@ class Evaluation:
                     dt = gt.loadRes(dt_list)
             else:
                 dt = results[0]
-        elif self.model_type in ['treg', 'clsf']:
-            ...
+        elif self.model_type == 'trecog':
+            if self.option == 'crop':
+                dt = results
+            else:
+                dt = results
         return dt
 
     def tdet_stats(self,
@@ -770,7 +769,7 @@ class Evaluation:
         dt = self.fit(inference_function, convert_output_function, data, gt)
 
         # Evaluate
-        metric = self.evaluate_tdet(gt, dt)
+        metric = self.evaluate(gt, dt)
 
         # STEP 3: TEST WITH CORRESPONDING OPTION
         if self.check(metric, threshold, criterion):
@@ -785,7 +784,7 @@ class Evaluation:
                 dt = self.fit(inference_function, convert_output_function, data, gt)
 
                 # Evaluate
-                metric = self.evaluate_tdet(gt, dt)
+                metric = self.evaluate(gt, dt)
                 if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
                     self.save_images(data)
@@ -793,16 +792,14 @@ class Evaluation:
                 
         return self.make_report(option, verbose)
 
-'''
-
-    def treg_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   criterion="accuracy",
-                   threshold=0.5,
-                   result_image_path=None):
-
+    def trecog_stats(self,
+                     inference_function,
+                     convert_output_function,
+                     option,
+                     criterion="precision",
+                     threshold=0.5,
+                     result_image_path=None,
+                     verbose=False):
         """
         Parameter:
         inference_function: a function receive our test input and give
@@ -814,128 +811,44 @@ class Evaluation:
                  "increasing_contrast", 
                  "decreasing_brightness", 
                  "decreasing_contrast", 
-                 "down_scale"]
+                 "down_scale", 
+                 "crop"]
         """
-        
-        self.model_type = 'treg'
-        self.keypoints = []
+
+        self.model_type = 'trecog'
+        self.option = option
         self.result_image_path = result_image_path
-        ## Step 1: check input image
-        # Read orginal image and groundtruth
+        # STEP 1: PREPROCESSING INPUT
+        # Read orginal image and its groundtruth
         self.preprocess_input()
 
-        # infer original image
-        self.create_original_input()
-        predicted_sample = inference_function(self.current_img)
-        formated_sample = convert_output_function(predicted_sample)
-        # get metric
-        metrics = self.evaluate_treg(formated_sample)
+        # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
+        # Create data which has format corresponding option
+        data, gt  = self.create_original_input()
 
-        # check condition
-        if self.check(metrics, threshold, criterion) is True:
+        # Conduct inference and format model result
+        dt = self.fit(inference_function, convert_output_function, data, gt)
 
-            ## Step 2: use corresponding generator
-            option_list = {"blurring": self.test_blurring(), 
-                           "increasing_brightness": self.test_increasing_brightness(), 
-                           "increasing_contrast": self.test_increasing_contrast(), 
-                           "decreasing_brightness": self.test_decreasing_brightness(), 
-                           "decreasing_contrast": self.test_decreasing_contrast(), 
-                           "down_scale": self.test_treg_scale()}
-            
+        # Evaluate
+        metric = self.evaluate(gt, dt)
+
+        # STEP 3: TEST WITH CORRESPONDING OPTION
+        if self.check(metric, threshold, criterion):
             # Get corresponding generator
-            image_generator = option_list.get(option, None)
-            if image_generator is None:
-                print("Invalid option")
-                return None
+            image_generator = self.get_generator(option)
 
             while True:
-                self.create_input(image_generator)
-
-                predicted_sample = inference_function(self.current_img)
-                formated_sample = convert_output_function(predicted_sample)
+                # Create data which has format corresponding option
+                data, gt = self.create_input(image_generator)
                 
-                metrics = self.evaluate_treg(formated_sample)
+                # Conduct inference and format model result
+                dt = self.fit(inference_function, convert_output_function, data, gt)
 
-                if self.check(metrics, threshold, criterion) is False:
+                # Evaluate
+                metric = self.evaluate(gt, dt)
+                if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
-                    if result_image_path is not None and self.stop_generator is False:
-                        self.save_image(os.path.join(result_image_path,
-                                                     option + os.path.split(self.img_path)[-1]), 
-                                        self.current_img)
+                    self.save_images(data)
                     break
-
-        ## Step 3
-        return self.make_report(option, verbose)
-
-    def clsf_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   result_image_path=None,
-                   verbose=0):
-        
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale"]
-        """
-
-        self.model_type = 'clsf'
-        self.keypoints = []
-        self.result_image_path = result_image_path
-        ## Step 1: check input image:
-        # Read orginal image and groundtruth
-        self.preprocess_input()
-
-        # infer original image
-        self.create_original_input()
-        predicted_sample = inference_function(self.current_img)
-        formated_sample = convert_output_function(predicted_sample)
-        # get metric
-        metrics = self.evaluate_clsf(formated_sample)
-
-        # check condition
-        if self.check(metrics, 0.5, "accuracy") is True:
-
-            ## Step 2: use corresponding generator
-            option_list = {"blurring": self.test_blurring(), 
-                           "increasing_brightness": self.test_increasing_brightness(), 
-                           "increasing_contrast": self.test_increasing_contrast(), 
-                           "decreasing_brightness": self.test_decreasing_brightness(), 
-                           "decreasing_contrast": self.test_decreasing_contrast(), 
-                           "down_scale": self.test_treg_scale()}
-            
-            # Get corresponding generator
-            image_generator = option_list.get(option, None)
-            if image_generator is None:
-                print("Invalid option")
-                return None
-
-            while True:
-                self.create_input(image_generator)
                 
-                predicted_sample = inference_function(self.current_img)
-                formated_sample = convert_output_function(predicted_sample)
-                
-                metrics = self.evaluate_clsf(formated_sample)
-
-                if self.check(metrics, 0.5, "accuracy") is False:
-                    self.update_report(option)
-                    if result_image_path is not None and self.stop_generator is False:
-                        self.save_image(os.path.join(result_image_path,
-                                                     option + os.path.split(self.img_path)[-1]), 
-                                        self.current_img)
-                    break
-
-        ## Step 3
         return self.make_report(option, verbose)
-
-'''
