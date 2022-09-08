@@ -10,6 +10,8 @@ import albumentations as A
 from pycocotools import mask
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import precision_score, recall_score
 
 from .utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 from .utils import script
@@ -34,7 +36,6 @@ class Evaluation:
         self.gt_path = gt_path
         self.image_color = image_color
 
-        self.stop_generator = False
         self.keypoints = []
         self.masks = []
         self.bboxes = []
@@ -78,6 +79,9 @@ class Evaluation:
         }
 
     def preprocess_input(self):
+        # set param
+        self.stop_generator = False
+
         # check option
         assert (self.option in self.report.keys()), 'Invalid option'
 
@@ -135,7 +139,7 @@ class Evaluation:
         elif self.model_type == 'clsf':
             with open(self.gt_path, 'r') as file:
                 gt_file = file.read().replace('\n', '')
-                self.transcriptions_list = gt_file
+                self.transcriptions_list = [gt_file]
     
     def get_generator(self, option):
         return self.report.get(option).get('generator')
@@ -233,6 +237,157 @@ class Evaluation:
         return transformed
 
     #======================================================
+    #==============split transformation test===============
+    def test_blurring(self):
+        blur_limit = 3
+        while True:
+            transformed = self.blur(blur_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = blur_limit
+            blur_limit += 2
+
+            yield data, raw_gt
+            
+            if blur_limit > 2 * max(self.height, self.width):
+                print("Reached the limit of blurring test!")
+                self.stop_generator = True
+
+    def test_increasing_brightness(self):
+        brightness_limit = 0
+        while True:
+            transformed = self.brightness(brightness_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = brightness_limit
+            brightness_limit = round(brightness_limit + 0.1, 1)
+
+            yield data, raw_gt
+
+            if brightness_limit >= 1.0:
+                print("Reached the limit of the brightness test!")
+                self.stop_generator = True
+
+    def test_increasing_contrast(self):
+        contrast_limit = 0
+        amout = 0.1
+        while True:
+            transformed = self.contrast(contrast_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = contrast_limit
+            amout += amout * 0.1
+            contrast_limit += amout
+
+            yield data, raw_gt
+            
+            if contrast_limit > 255:
+                print("Reached the limit of the contrast test!")
+                self.stop_generator = True
+
+    def test_decreasing_brightness(self):
+        brightness_limit = 0
+        while True:
+            transformed = self.brightness(brightness_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = brightness_limit
+            brightness_limit  = round(brightness_limit - 0.1, 1)
+
+            yield data, raw_gt
+
+            if brightness_limit <= -1.0:
+                print("Reached the limit of the brightness test!")
+                self.stop_generator = True
+
+    def test_decreasing_contrast(self):
+        contrast_limit = 0
+        amout = 0.1
+        while True:
+            transformed = self.contrast(contrast_limit)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = contrast_limit
+            amout += amout * 0.1
+            contrast_limit -= amout
+
+            yield data, raw_gt
+            
+            if contrast_limit < -255:
+                print("Reached the limit of the contrast test!")
+                self.stop_generator = True
+
+    def test_scale(self):
+        ratio = 0.9
+        while True:
+            transformed = self.resize(ratio)
+            data = [transformed['image']]
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = ratio
+            ratio = round(ratio - 0.1, 1)
+
+            yield data, raw_gt
+
+            if ratio <= 0.1 or min(data[0].shape[:2]) < 3:
+                self.stop_generator = True
+
+    def test_crop(self):
+        # crop 9 parts of image according alpha
+        numerator = 5
+        denominator = 6
+
+        while True:
+            # 1/3 <= alpha < 1.0
+            alpha = numerator / denominator
+
+            # Create a matrix which represents 9 parts of image
+            # [[top-left]     [top-center]      [top-right]
+            #  [midle-left]     [center]      [midle-right]
+            #  [bottom-left] [bottom-center] [bottom-right]]
+            alpha_matrix = np.array([
+                [            0,             0,                 alpha,                 alpha],
+                [(1 - alpha)/2,             0, (1 - alpha)/2 + alpha,                 alpha],
+                [    1 - alpha,             0,                     1,                 alpha],
+                [            0, (1 - alpha)/2,                 alpha, (1 - alpha)/2 + alpha],
+                [(1 - alpha)/2, (1 - alpha)/2, (1 - alpha)/2 + alpha, (1 - alpha)/2 + alpha],
+                [    1 - alpha, (1 - alpha)/2,                     1, (1 - alpha)/2 + alpha],
+                [            0,     1 - alpha,                 alpha,                     1],
+                [(1 - alpha)/2,     1 - alpha, (1 - alpha)/2 + alpha,                     1],
+                [    1 - alpha,     1 - alpha,                     1,                     1],
+            ])
+            self.limit = alpha
+
+            data = []
+            raw_gt = []
+            new_coords = alpha_matrix * np.array([self.width, self.height, self.width, self.height])
+            new_coords = new_coords.astype(int)    
+
+            for _, coord in enumerate(new_coords):
+                transformed = self.crop(*coord)
+                data.append(transformed['image'])
+                del transformed['image']
+                raw_gt.append(transformed)
+            
+            denominator += 1
+
+            yield data, raw_gt
+
+            if denominator >= 15:
+                self.stop_generator = True
+
+    #======================================================
     #==================COCO DATASET TOOL=================== 
     def find_bbox(self, polygon):
         x = min([polygon[i] for i in range(0, len(polygon), 2)])
@@ -304,12 +459,12 @@ class Evaluation:
                 mask_rle = mask.encode(np.asfortranarray(transformed_mask))
                 mask_rle['counts'] = mask_rle['counts'].decode('ascii')
                 ann = {
-                    "id": ann_id, 
-                    "image_id": img_id + 1, 
-                    "category_id": 1, 
-                    "segmentation": mask_rle, 
+                    "id": ann_id,
+                    "image_id": img_id + 1,
+                    "category_id": 1,
+                    "segmentation": mask_rle,
                     "area": float(mask.area(mask_rle)),
-                    "bbox": mask.toBbox(mask_rle).tolist(), 
+                    "bbox": mask.toBbox(mask_rle).tolist(),
                     "iscrowd": 0,
                 }
                 image_infos['annotations'].append(ann)
@@ -320,7 +475,7 @@ class Evaluation:
         ]
         return image_infos
 
-    def create_cocogt(self, coco_format):        
+    def create_cocogt(self, coco_format):
         # convert to COCO class
         annotation_file = 'temp_gt.json'
         json_content = json.dumps(coco_format)
@@ -352,152 +507,6 @@ class Evaluation:
         with HiddenPrints():
             cocodt=cocogt.loadRes(results)
         return cocodt
-
-    #======================================================
-    #==============split transformation test===============    
-    def test_blurring(self):
-        blur_limit = 3
-        while True:
-            transformed = self.blur(blur_limit)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = blur_limit
-            blur_limit += 2
-
-            yield data, raw_gt
-            
-            if blur_limit > 2 * max(self.height, self.width):
-                print("Reached the limit of blurring test!")
-                self.stop_generator = True
-
-    def test_increasing_brightness(self):
-        brightness_limit = 0
-        while True:
-            transformed = self.brightness(brightness_limit)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = brightness_limit
-            brightness_limit += 0.1
-
-            yield data, raw_gt
-
-            if brightness_limit > 1.0:
-                print("Reached the limit of the brightness test!")
-                self.stop_generator = True
-
-    def test_increasing_contrast(self):
-        contrast_limit = 0
-        amout = 0.1
-        while True:
-            transformed = self.contrast(contrast_limit)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = contrast_limit
-            amout += amout * 0.1
-            contrast_limit += amout
-
-            yield data, raw_gt
-            
-            if contrast_limit > 255:
-                print("Reached the limit of the contrast test!")
-                self.stop_generator = True
-
-    def test_decreasing_brightness(self):
-        brightness_limit = 0
-        while True:
-            transformed = self.brightness(brightness_limit)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = brightness_limit
-            brightness_limit -= 0.1
-
-            yield data, raw_gt
-
-            if brightness_limit < -1.0:
-                print("Reached the limit of the brightness test!")
-                self.stop_generator = True
-
-    def test_decreasing_contrast(self):
-        contrast_limit = 0
-        amout = 0.1
-        while True:
-            transformed = self.contrast(contrast_limit)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = contrast_limit
-            amout += amout * 0.1
-            contrast_limit -= amout
-
-            yield data, raw_gt
-            
-            if contrast_limit < -255:
-                print("Reached the limit of the contrast test!")
-                self.stop_generator = True
-
-    def test_scale(self):
-        ratio = 0.9
-        while True:
-            transformed = self.resize(ratio)
-            data = [transformed['image']]
-            del transformed['image']
-            raw_gt = [transformed]
-
-            self.limit = ratio
-            ratio -= 0.1
-
-            yield data, raw_gt
-
-            if ratio <= 0.11 or min(data[0].shape[:2]) < 3:
-                self.stop_generator = True
-
-    def test_crop(self):
-        # crop 9 parts of image according alpha
-        numerator = 5
-        denominator = 6
-
-        while True:
-
-            alpha = numerator / denominator
-            alpha_matrix = np.array([
-                [            0,             0,                 alpha,                 alpha],
-                [(1 - alpha)/2,             0, (1 - alpha)/2 + alpha,                 alpha],
-                [    1 - alpha,             0,                     1,                 alpha],
-                [            0, (1 - alpha)/2,                 alpha, (1 - alpha)/2 + alpha],
-                [(1 - alpha)/2, (1 - alpha)/2, (1 - alpha)/2 + alpha, (1 - alpha)/2 + alpha],
-                [    1 - alpha, (1 - alpha)/2,                     1, (1 - alpha)/2 + alpha],
-                [            0,     1 - alpha,                 alpha,                     1],
-                [(1 - alpha)/2,     1 - alpha, (1 - alpha)/2 + alpha,                     1],
-                [    1 - alpha,     1 - alpha,                     1,                     1],
-            ])
-            self.limit = alpha
-
-            data = []
-            raw_gt = []
-            new_coords = alpha_matrix * np.array([self.width, self.height, self.width, self.height])
-            new_coords = new_coords.astype(int)    
-
-            for _, coord in enumerate(new_coords):
-                transformed = self.crop(*coord)
-                data.append(transformed['image'])
-                del transformed['image']
-                raw_gt.append(transformed)
-            
-            denominator += 1
-
-            yield data, raw_gt
-
-            if denominator >= 15:
-                self.stop_generator = True
 
     #======================================================
     def compute_accuracy(self, ground_truth, predictions, mode='per_char'):
@@ -571,9 +580,9 @@ class Evaluation:
                     cocoeval.accumulate()
                     cocoeval.summarize()
                 metric = {
-                    'AP' : cocoeval.stats[0],
-                    'AP_50' : cocoeval.stats[1],
-                    'AP_75' : cocoeval.stats[2]
+                    'ap' : cocoeval.stats[0],
+                    'ap_50' : cocoeval.stats[1],
+                    'ap_75' : cocoeval.stats[2]
                 }
             else:
                 alias_func = script.evaluate_method_per_sample
@@ -585,6 +594,13 @@ class Evaluation:
             metric = {
                 "accuracy": acc,
                 "levenshtein": levenshtein_distance
+            }
+        elif self.model_type == 'clsf':
+            metric = {
+                "accuracy": accuracy_score(gt, dt),
+                "precision": precision_score(gt, dt, average='micro'),
+                "recall": recall_score(gt, dt, average='micro'),
+                "f1": f1_score(gt, dt, average='micro')
             }
 
         return metric
@@ -625,6 +641,9 @@ class Evaluation:
             else:
                 gt = self.transcriptions_list
         
+        elif self.model_type == 'clsf':
+            gt = self.transcriptions_list
+        
         return data, gt
 
     def create_input(self, image_generator):
@@ -661,6 +680,11 @@ class Evaluation:
                     'texts': self.transcriptions_list
                 }
         elif self.model_type  == 'trecog':
+            if self.option == 'crop':
+                gt = self.transcriptions_list * 9
+            else:
+                gt = self.transcriptions_list
+        elif self.model_type == 'clsf':
             if self.option == 'crop':
                 gt = self.transcriptions_list * 9
             else:
@@ -729,6 +753,8 @@ class Evaluation:
                 dt = results
             else:
                 dt = results
+        elif self.model_type == 'clsf':
+            dt = results
         return dt
 
     def tdet_stats(self,
@@ -771,7 +797,7 @@ class Evaluation:
         # Evaluate
         metric = self.evaluate(gt, dt)
 
-        # STEP 3: TEST WITH CORRESPONDING OPTION
+        # STEP 3: RUN TEST WITH CORRESPONDING OPTION
         if self.check(metric, threshold, criterion):
             # Get corresponding generator
             image_generator = self.get_generator(option)
@@ -785,8 +811,11 @@ class Evaluation:
 
                 # Evaluate
                 metric = self.evaluate(gt, dt)
+
+                # Check end condition
                 if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
+                    # save images which model dectected incorrect
                     self.save_images(data)
                     break
                 
@@ -832,7 +861,7 @@ class Evaluation:
         # Evaluate
         metric = self.evaluate(gt, dt)
 
-        # STEP 3: TEST WITH CORRESPONDING OPTION
+        # STEP 3: RUN TEST WITH CORRESPONDING OPTION
         if self.check(metric, threshold, criterion):
             # Get corresponding generator
             image_generator = self.get_generator(option)
@@ -846,8 +875,76 @@ class Evaluation:
 
                 # Evaluate
                 metric = self.evaluate(gt, dt)
+
+                # Check end condition
                 if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
+                    # save images which model dectected incorrect
+                    self.save_images(data)
+                    break
+                
+        return self.make_report(option, verbose)
+
+    def clsf_stats(self,
+                   inference_function,
+                   convert_output_function,
+                   option,
+                   criterion="precision",
+                   threshold=0.5,
+                   result_image_path=None,
+                   verbose=False):
+        """
+        Parameter:
+        inference_function: a function receive our test input and give
+        coresponding predicted sample.
+        convert_output_function: this function converts your model 
+        output according our format.
+        option: ["blurring", 
+                 "increasing_brightness", 
+                 "increasing_contrast", 
+                 "decreasing_brightness", 
+                 "decreasing_contrast", 
+                 "down_scale", 
+                 "crop"]
+        """
+
+        self.model_type = 'clsf'
+        self.option = option
+        self.result_image_path = result_image_path
+        # STEP 1: PREPROCESSING INPUT
+        # Read orginal image and its groundtruth
+        self.preprocess_input()
+
+        ##############################################################
+        # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
+        ##############################################################
+
+        # Create data which has format corresponding option
+        data, gt  = self.create_original_input()
+
+        # Conduct inference and format model result
+        dt = self.fit(inference_function, convert_output_function, data, gt)
+
+        metric = self.evaluate(gt, dt)
+
+        # STEP 3: RUN TEST WITH CORRESPONDING OPTION
+        if self.check(metric, threshold, criterion):
+            # Get corresponding generator
+            image_generator = self.get_generator(option)
+
+            while True:
+                # Create data which has format corresponding option
+                data, gt = self.create_input(image_generator)
+                
+                # Conduct inference and format model result
+                dt = self.fit(inference_function, convert_output_function, data, gt)
+
+                metric = self.evaluate(gt, dt)
+
+                # Check end condition
+                if self.check(metric, threshold, criterion) is False:
+                    self.update_report(option)
+                    # save images which model dectected incorrect
                     self.save_images(data)
                     break
                 

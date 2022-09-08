@@ -6,3 +6,8 @@ lay ket qua truoc khi model chet
 them 1 so nhieu
 gui model ocr
 gui report
+chuyen lai mau cho text recog
+
+img + trang thai + bai test
+reset limit of contrast
+save pre-died

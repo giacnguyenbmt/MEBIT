@@ -5,7 +5,7 @@ from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 import cv2
 
-from metrics import Evaluation
+from mebit.metrics import Evaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
@@ -24,11 +24,11 @@ def convert_output_function(predicted_sample):
 
 img = 'data/word_1.png'
 gt = 'data/treg_gt.txt'
-option = ["blurring", 
-          "increasing_brightness", 
+option = ["blurring",
+          "increasing_brightness",
           "increasing_contrast",
-          "decreasing_brightness", 
-          "decreasing_contrast", 
+          "decreasing_brightness",
+          "decreasing_contrast",
           "down_scale",
           "crop"]
 
@@ -41,6 +41,11 @@ config['predictor']['beamsearch']=False
 detector = Predictor(config)
 
 foo = Evaluation(img, gt)
-foo.treg_stats(inference_function, 
-               convert_output_function, 
-               option[1])
+
+for i in range(len(option)):
+    foo.trecog_stats(inference_function, 
+                    convert_output_function, 
+                    option[i],
+                    'accuracy',
+                    0.5,
+                    verbose=True)

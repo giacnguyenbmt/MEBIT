@@ -1,7 +1,7 @@
 from mmocr.utils.ocr import MMOCR
 import cv2
 
-from metrics_ver2 import Evaluation
+from mebit.metrics import Evaluation
 
 
 def inference_function(input):
@@ -36,12 +36,12 @@ foo = Evaluation(img, gt)
 # foo.tdet_stats(inference_function, 
 #                convert_output_function, 
 #                option[6],
-#                'AP',
-#                0.1,
+#                'ap',
+#                0.5,
 #                verbose=True)
 foo.tdet_stats(inference_function, 
                convert_output_function, 
                option[0],
                'precision',
-               0.1,
+               0.5,
                verbose=True)
