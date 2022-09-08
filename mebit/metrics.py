@@ -162,6 +162,7 @@ class Evaluation:
                 if len(data) == 1:
                     _path = os.path.join(
                         self.result_image_path,
+                        'images',
                         _name \
                         + "_{}_{}".format(self.option, type_data) \
                         + _extension
@@ -171,6 +172,7 @@ class Evaluation:
                     for i, img in enumerate(data):
                         _path = os.path.join(
                             self.result_image_path,
+                            'images',
                             _name
                             + "_{}_{}_{}".format(self.option, 
                                                  type_data, 
