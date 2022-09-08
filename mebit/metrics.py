@@ -174,9 +174,11 @@ class Evaluation:
                             self.result_image_path,
                             'images',
                             _name
-                            + "_{}_{}_{}".format(self.option, 
-                                                 type_data, 
-                                                 i+1) \
+                            + "_{}_{}_{}".format(
+                                self.option, 
+                                i + 1,
+                                type_data
+                            ) \
                             + _extension
                         )
                         self.save_image(_path, img)
