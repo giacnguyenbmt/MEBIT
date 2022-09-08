@@ -266,7 +266,7 @@ class Evaluation:
             yield data, raw_gt
             
             if blur_limit > 2 * max(self.height, self.width):
-                print("Reached the limit of blurring test!")
+                print("Reached the limit of the blurring test!")
                 self.stop_generator = True
 
     def test_increasing_brightness(self):
