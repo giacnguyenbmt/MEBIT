@@ -9,7 +9,7 @@
 #Average Precision is also calcuted when 'CONFIDENCES' parameter is True
 
 from collections import namedtuple
-from utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
+from . import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 import importlib
 
 def evaluation_imports():
