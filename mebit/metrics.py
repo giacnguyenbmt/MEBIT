@@ -153,7 +153,7 @@ class Evaluation:
             new_img = image
         cv2.imwrite(name, new_img)
 
-    def save_images(self, data):
+    def save_images(self, data, type_data='deadpoint'):
         if self.result_image_path is not None:
             if self.test_failed:
                 file_name = os.path.split(self.img_path)[-1]
@@ -163,7 +163,7 @@ class Evaluation:
                     _path = os.path.join(
                         self.result_image_path,
                         _name \
-                        + "_{}".format(self.option) \
+                        + "_{}_{}".format(self.option, type_data) \
                         + _extension
                     )
                     self.save_image(_path, data[0])
@@ -172,7 +172,9 @@ class Evaluation:
                         _path = os.path.join(
                             self.result_image_path,
                             _name
-                            + "_{}_{}_".format(self.option, i+1) \
+                            + "_{}_{}_{}".format(self.option, 
+                                                 type_data, 
+                                                 i+1) \
                             + _extension
                         )
                         self.save_image(_path, img)
@@ -655,7 +657,7 @@ class Evaluation:
         
         elif self.model_type == 'clsf':
             gt = self.transcriptions_list
-        
+
         return data, gt
 
     def create_input(self, image_generator):
@@ -768,6 +770,11 @@ class Evaluation:
         elif self.model_type == 'clsf':
             dt = results
         return dt
+
+    def backup_data(self, data, gt, dt):
+        self.penultimate_data = data
+        self.penultimate_gt = gt
+        self.penultimate_dt = dt
 
     def tdet_stats(self,
                    inference_function,
@@ -945,6 +952,8 @@ class Evaluation:
             image_generator = self.get_generator(option)
 
             while True:
+                self.backup_data(data, gt, dt)
+
                 # Create data which has format corresponding option
                 data, gt = self.create_input(image_generator)
                 
@@ -956,8 +965,9 @@ class Evaluation:
                 # Check end condition
                 if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
-                    # save images which model dectected incorrect
-                    self.save_images(data)
+                    # save log point at which model dectected incorrect
+                    self.save_images(data, type_data='deadpoint')
+                    self.save_images(self.penultimate_data, type_data='lastpoint')
                     break
                 
         return self.make_report(option, verbose)
