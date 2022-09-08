@@ -88,7 +88,9 @@ class Evaluation:
         # Create a folder to store result
         if self.result_image_path is not None:
             if not os.path.exists(self.result_image_path):
-                os.makedirs(self.result_image_path)
+                os.makedirs(os.path.join(self.result_image_path, 'images'))
+                os.makedirs(os.path.join(self.result_image_path, 'gt'))
+                os.makedirs(os.path.join(self.result_image_path, 'dt'))
 
         # Read image
         BGR_img = cv2.imread(self.img_path)
@@ -154,20 +156,26 @@ class Evaluation:
     def save_images(self, data):
         if self.result_image_path is not None:
             if self.test_failed:
+                file_name = os.path.split(self.img_path)[-1]
+                _name, _extension = os.path.splitext(file_name)
+
                 if len(data) == 1:
-                    _name = os.path.join(
+                    _path = os.path.join(
                         self.result_image_path,
-                        self.option \
-                        + os.path.split(self.img_path)[-1])
-                    self.save_image(_name, data[0])
+                        _name \
+                        + "_{}".format(self.option) \
+                        + _extension
+                    )
+                    self.save_image(_path, data[0])
                 else:
                     for i, img in enumerate(data):
-                        _name = os.path.join(
+                        _path = os.path.join(
                             self.result_image_path,
-                            self.option \
-                            + "_{}_".format(i+1) \
-                            + os.path.split(self.img_path)[-1])
-                        self.save_image(_name, img)
+                            _name
+                            + "_{}_{}_".format(self.option, i+1) \
+                            + _extension
+                        )
+                        self.save_image(_path, img)
 
     # =====================================================
     # ==============define transformation==================
@@ -288,6 +296,7 @@ class Evaluation:
             yield data, raw_gt
             
             if contrast_limit > 255:
+                self.limit = 255.0
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
@@ -324,6 +333,7 @@ class Evaluation:
             yield data, raw_gt
             
             if contrast_limit < -255:
+                self.limit = -255.0
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
@@ -341,6 +351,7 @@ class Evaluation:
             yield data, raw_gt
 
             if ratio <= 0.1 or min(data[0].shape[:2]) < 3:
+                print("Reached the limit of the down-scale test!")
                 self.stop_generator = True
 
     def test_crop(self):
@@ -385,6 +396,7 @@ class Evaluation:
             yield data, raw_gt
 
             if denominator >= 15:
+                print("Reached the limit of the crop test!")
                 self.stop_generator = True
 
     #======================================================

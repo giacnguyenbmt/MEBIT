@@ -10,7 +10,7 @@ import os
 import skimage.io as io
 import matplotlib.pyplot as plt
 
-import utils.rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
+from mebit.utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 
 class HiddenPrints:
     def __enter__(self):
