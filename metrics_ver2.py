@@ -11,8 +11,8 @@ from pycocotools import mask
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 
-from utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
-from utils import script
+from .utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
+from .utils import script
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
