@@ -444,28 +444,38 @@ class Evaluation:
                 _name, _extension = os.path.splitext(file_name)
 
                 if len(data) == 1:
+                    _new_name = _name \
+                        + "_{}_{}".format(self.option, type_data) \
+                        + _extension
                     _path = os.path.join(
                         self.result_image_path,
                         'images',
-                        _name \
-                        + "_{}_{}".format(self.option, type_data) \
-                        + _extension
+                        _new_name
                     )
                     self.save_image(_path, data[0])
+                    if type_data == 'deadpoint':
+                        self.lastpoint_img_name.append(_new_name)
+                    elif type_data == 'lastpoint':
+                        self.deadpoint_img_name.append(_new_name)
                 else:
                     for i, img in enumerate(data):
-                        _path = os.path.join(
-                            self.result_image_path,
-                            'images',
-                            _name
+                        _new_name = _name \
                             + "_{}_{}_{}".format(
                                 self.option, 
                                 i + 1,
                                 type_data
                             ) \
                             + _extension
+                        _path = os.path.join(
+                            self.result_image_path,
+                            'images',
+                            _new_name
                         )
                         self.save_image(_path, img)
+                        if type_data == 'deadpoint':
+                            self.lastpoint_img_name.append(_new_name)
+                        elif type_data == 'lastpoint':
+                            self.deadpoint_img_name.append(_new_name)
     
     def save_gt(self, gt):
         if self.model_type == 'tdet':
