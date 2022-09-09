@@ -39,6 +39,8 @@ class Evaluation:
         self.keypoints = []
         self.masks = []
         self.bboxes = []
+        self.lastpoint_img_name = []
+        self.deadpoint_img_name = []
         
         self.report = {
             "blurring": {
@@ -77,111 +79,6 @@ class Evaluation:
                 'note': 'lower is better',
                 'generator': self.test_crop()},
         }
-
-    def preprocess_input(self):
-        # set param
-        self.stop_generator = False
-
-        # check option
-        assert (self.option in self.report.keys()), 'Invalid option'
-
-        # Create a folder to store result
-        if self.result_image_path is not None:
-            if not os.path.exists(self.result_image_path):
-                os.makedirs(os.path.join(self.result_image_path, 'images'))
-                os.makedirs(os.path.join(self.result_image_path, 'gt'))
-                os.makedirs(os.path.join(self.result_image_path, 'dt'))
-
-        # Read image
-        BGR_img = cv2.imread(self.img_path)
-        if self.image_color == 'rgb':
-            self.img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
-        elif self.image_color == 'bgr':
-            self.img = BGR_img
-
-        self.height, self.width, _ = self.img.shape
-
-        # Read ground truth
-        if self.model_type == 'tdet':
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read()
-                self.points_list, _, self.transcriptions_list = read_gt(
-                    gt_file,
-                    CRLF=False,
-                    LTRB=False,
-                    withTranscription=True,
-                    withConfidence=False,
-                )
-            self.keypoints = [(self.points_list[j][i], 
-                                self.points_list[j][i + 1])
-                                for j in range(len(self.points_list)) 
-                                for i in range(0, 8, 2)]
-
-        elif self.model_type == 'trecog':
-            self.transcriptions_list = []
-            evaluationParams = {
-                'SAMPLE_NAME_2_ID':'(?:word_)?([0-9]+).png',
-                'CRLF':False,
-                'DOUBLE_QUOTES':True
-                }
-
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read()
-
-            gtLines = gt_file.split("\r\n" if evaluationParams['CRLF'] else "\n")
-            for line in gtLines:
-                line = line.replace("\r","").replace("\n","")
-                if(line != ""):
-                    if (evaluationParams['DOUBLE_QUOTES']):
-                        m = re.search(r'"(.+)"',line)
-                    else:
-                        m = re.search(r"'(.+)'",line)
-                    self.transcriptions_list.append(m.group()[1:-1])
-
-        elif self.model_type == 'clsf':
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read().replace('\n', '')
-                self.transcriptions_list = [gt_file]
-    
-    def get_generator(self, option):
-        return self.report.get(option).get('generator')
-
-    def save_image(self, name, image):
-        if self.image_color == 'rgb':
-            new_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        else:
-            new_img = image
-        cv2.imwrite(name, new_img)
-
-    def save_images(self, data, type_data='deadpoint'):
-        if self.result_image_path is not None:
-            if self.test_failed:
-                file_name = os.path.split(self.img_path)[-1]
-                _name, _extension = os.path.splitext(file_name)
-
-                if len(data) == 1:
-                    _path = os.path.join(
-                        self.result_image_path,
-                        'images',
-                        _name \
-                        + "_{}_{}".format(self.option, type_data) \
-                        + _extension
-                    )
-                    self.save_image(_path, data[0])
-                else:
-                    for i, img in enumerate(data):
-                        _path = os.path.join(
-                            self.result_image_path,
-                            'images',
-                            _name
-                            + "_{}_{}_{}".format(
-                                self.option, 
-                                i + 1,
-                                type_data
-                            ) \
-                            + _extension
-                        )
-                        self.save_image(_path, img)
 
     # =====================================================
     # ==============define transformation==================
@@ -527,6 +424,96 @@ class Evaluation:
         return cocodt
 
     #======================================================
+    #==================Log and report======================
+    def backup_data(self, data, gt, dt):
+        self.penultimate_data = data
+        self.penultimate_gt = gt
+        self.penultimate_dt = dt
+
+    def save_image(self, name, image):
+        if self.image_color == 'rgb':
+            new_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        else:
+            new_img = image
+        cv2.imwrite(name, new_img)
+
+    def save_images(self, data, type_data='deadpoint'):
+        if self.result_image_path is not None:
+            if self.test_failed:
+                file_name = os.path.split(self.img_path)[-1]
+                _name, _extension = os.path.splitext(file_name)
+
+                if len(data) == 1:
+                    _path = os.path.join(
+                        self.result_image_path,
+                        'images',
+                        _name \
+                        + "_{}_{}".format(self.option, type_data) \
+                        + _extension
+                    )
+                    self.save_image(_path, data[0])
+                else:
+                    for i, img in enumerate(data):
+                        _path = os.path.join(
+                            self.result_image_path,
+                            'images',
+                            _name
+                            + "_{}_{}_{}".format(
+                                self.option, 
+                                i + 1,
+                                type_data
+                            ) \
+                            + _extension
+                        )
+                        self.save_image(_path, img)
+    
+    def save_gt(self, gt):
+        if self.model_type == 'tdet':
+            if self.option == 'crop':
+                ...
+            else:
+                ...
+        elif self.model_type == 'trecog':
+            ...
+        elif self.model_type == 'clsf':
+            ...
+    
+    def save_dt(self, dt):
+        if self.model_type == 'tdet':
+            if self.option == 'crop':
+                ...
+            else:
+                ...
+        elif self.model_type == 'trecog':
+            ...
+        elif self.model_type == 'clsf':
+            ...
+    
+    def log(self, data, gt, dt, metric):
+        # last point
+        self.save_images(self.penultimate_data, type_data='lastpoint')
+        self.save_gt(self.penultimate_gt)
+        self.save_dt(self.penultimate_dt)
+
+        # dead point
+        self.save_images(data, type_data='deadpoint')
+        self.save_gt(gt)
+        self.save_dt(dt)
+
+    def update_report(self, option):
+        self.report[option]['value'] = self.limit
+
+    def make_report(self, option, verbose=True):
+        message = "{}: \n{} = {} \n({})".format(option,
+                                                self.report[option]['message'],
+                                                self.report[option]['value'],
+                                                self.report[option]['note'])
+        if verbose is True:
+            print(message)
+        return self.report[option]
+
+    #======================================================
+    #===============Metrics and condition==================
     def compute_accuracy(self, ground_truth, predictions, mode='per_char'):
         """
         Computes accuracy for text recognition
@@ -622,12 +609,90 @@ class Evaluation:
             }
 
         return metric
+
+    def check(self, metrics, threshold, criterion="precision"):
+        self.test_failed = True
+        if criterion == 'levenshtein':
+            if metrics[criterion] > threshold:
+                return False
+        elif metrics[criterion] < threshold:
+            return False
+        self.test_failed = False
+
+        if self.stop_generator is True:
+            return False
+
+        return True
+
+    #======================================================
+    #========================Process=======================
+    def preprocess_input(self):
+        # set param
+        self.stop_generator = False
+
+        # check option
+        assert (self.option in self.report.keys()), 'Invalid option'
+
+        # Create a folder to store result
+        if self.result_image_path is not None:
+            if not os.path.exists(self.result_image_path):
+                os.makedirs(os.path.join(self.result_image_path, 'images'))
+                os.makedirs(os.path.join(self.result_image_path, 'gt'))
+                os.makedirs(os.path.join(self.result_image_path, 'dt'))
+
+        # Read image
+        BGR_img = cv2.imread(self.img_path)
+        if self.image_color == 'rgb':
+            self.img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
+        elif self.image_color == 'bgr':
+            self.img = BGR_img
+
+        self.height, self.width, _ = self.img.shape
+
+        # Read ground truth
+        if self.model_type == 'tdet':
+            with open(self.gt_path, 'r') as file:
+                gt_file = file.read()
+                self.points_list, _, self.transcriptions_list = read_gt(
+                    gt_file,
+                    CRLF=False,
+                    LTRB=False,
+                    withTranscription=True,
+                    withConfidence=False,
+                )
+            self.keypoints = [(self.points_list[j][i], 
+                                self.points_list[j][i + 1])
+                                for j in range(len(self.points_list)) 
+                                for i in range(0, 8, 2)]
+
+        elif self.model_type == 'trecog':
+            self.transcriptions_list = []
+            evaluationParams = {
+                'SAMPLE_NAME_2_ID':'(?:word_)?([0-9]+).png',
+                'CRLF':False,
+                'DOUBLE_QUOTES':True
+                }
+
+            with open(self.gt_path, 'r') as file:
+                gt_file = file.read()
+
+            gtLines = gt_file.split("\r\n" if evaluationParams['CRLF'] else "\n")
+            for line in gtLines:
+                line = line.replace("\r","").replace("\n","")
+                if(line != ""):
+                    if (evaluationParams['DOUBLE_QUOTES']):
+                        m = re.search(r'"(.+)"',line)
+                    else:
+                        m = re.search(r"'(.+)'",line)
+                    self.transcriptions_list.append(m.group()[1:-1])
+
+        elif self.model_type == 'clsf':
+            with open(self.gt_path, 'r') as file:
+                gt_file = file.read().replace('\n', '')
+                self.transcriptions_list = [gt_file]
     
-    def evaluate_clsf(self, predicted_sample):
-        acc = 1 if self.transcriptions_list==predicted_sample else 0
-        return {
-            "accuracy": acc,
-        }
+    def get_generator(self, option):
+        return self.report.get(option).get('generator')
         
     def create_original_input(self):
         data = [self.img]
@@ -638,8 +703,8 @@ class Evaluation:
                     'transcriptions_list': self.transcriptions_list
                 }
                 coco_format = self.text_infos_to_coco_dict(
-                    self.img_path, 
-                    tdet_gt, 
+                    self.img_path,
+                    tdet_gt,
                     self.width,
                     self.height
                 )
@@ -710,32 +775,6 @@ class Evaluation:
 
         return data, gt
 
-    def make_report(self, option, verbose=True):
-        message = "{}: \n{} = {} \n({})".format(option,
-                                                self.report[option]['message'],
-                                                self.report[option]['value'],
-                                                self.report[option]['note'])
-        if verbose is True:
-            print(message)
-        return self.report[option]
-
-    def check(self, metrics, threshold, criterion="precision"):
-        self.test_failed = True
-        if criterion == 'levenshtein':
-            if metrics[criterion] > threshold:
-                return False
-        elif metrics[criterion] < threshold:
-            return False
-        self.test_failed = False
-
-        if self.stop_generator is True:
-            return False
-
-        return True
-
-    def update_report(self, option):
-        self.report[option]['value'] = self.limit
-
     def fit(self, inference_function, convert_output_function, data, gt):
         # get result from model
         results = []
@@ -775,12 +814,7 @@ class Evaluation:
             dt = results
         return dt
 
-    def backup_data(self, data, gt, dt):
-        self.penultimate_data = data
-        self.penultimate_gt = gt
-        self.penultimate_dt = dt
-
-    def transformation_test(self,
+    def test_transformation(self,
                             inference_function,
                             convert_output_function,
                             option,
@@ -790,10 +824,7 @@ class Evaluation:
         # Read orginal image and its groundtruth
         self.preprocess_input()
 
-        ##############################################################
         # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
-        ##############################################################
-
         # Create data which has format corresponding option
         data, gt  = self.create_original_input()
 
@@ -826,6 +857,9 @@ class Evaluation:
                     self.save_images(self.penultimate_data, type_data='lastpoint')
                     break
 
+    #======================================================
+    #====================Main function=====================
+
     def tdet_stats(self,
                    inference_function,
                    convert_output_function,
@@ -853,7 +887,7 @@ class Evaluation:
         self.option = option
         self.result_image_path = result_image_path
 
-        self.transformation_test(
+        self.test_transformation(
             inference_function,
             convert_output_function,
             option,
@@ -890,7 +924,7 @@ class Evaluation:
         self.option = option
         self.result_image_path = result_image_path
 
-        self.transformation_test(
+        self.test_transformation(
             inference_function,
             convert_output_function,
             option,
@@ -927,7 +961,7 @@ class Evaluation:
         self.option = option
         self.result_image_path = result_image_path
 
-        self.transformation_test(
+        self.test_transformation(
             inference_function,
             convert_output_function,
             option,
