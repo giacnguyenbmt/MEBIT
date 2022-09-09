@@ -302,7 +302,7 @@ class Evaluation:
             yield data, raw_gt
             
             if contrast_limit > 255:
-                self.limit = 255.0
+                contrast_limit = 255.0
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
@@ -339,7 +339,7 @@ class Evaluation:
             yield data, raw_gt
             
             if contrast_limit < -255:
-                self.limit = -255.0
+                contrast_limit = -255.0
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
