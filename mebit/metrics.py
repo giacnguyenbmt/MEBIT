@@ -780,160 +780,12 @@ class Evaluation:
         self.penultimate_gt = gt
         self.penultimate_dt = dt
 
-    def tdet_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   criterion="precision",
-                   threshold=0.5,
-                   result_image_path=None,
-                   verbose=False):
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
-        """
-
-        self.model_type = 'tdet'
-        self.option = option
-        self.result_image_path = result_image_path
-        # STEP 1: PREPROCESSING INPUT
-        # Read orginal image and its groundtruth
-        self.preprocess_input()
-
-        # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
-        # Create data which has format corresponding option
-        data, gt  = self.create_original_input()
-
-        # Conduct inference and format model result
-        dt = self.fit(inference_function, convert_output_function, data, gt)
-
-        # Evaluate
-        metric = self.evaluate(gt, dt)
-
-        # STEP 3: RUN TEST WITH CORRESPONDING OPTION
-        if self.check(metric, threshold, criterion):
-            # Get corresponding generator
-            image_generator = self.get_generator(option)
-
-            while True:
-                # Create data which has format corresponding option
-                data, gt = self.create_input(image_generator)
-                
-                # Conduct inference and format model result
-                dt = self.fit(inference_function, convert_output_function, data, gt)
-
-                # Evaluate
-                metric = self.evaluate(gt, dt)
-
-                # Check end condition
-                if self.check(metric, threshold, criterion) is False:
-                    self.update_report(option)
-                    # save images which model dectected incorrect
-                    self.save_images(data)
-                    break
-                
-        return self.make_report(option, verbose)
-
-    def trecog_stats(self,
-                     inference_function,
-                     convert_output_function,
-                     option,
-                     criterion="precision",
-                     threshold=0.5,
-                     result_image_path=None,
-                     verbose=False):
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
-        """
-
-        self.model_type = 'trecog'
-        self.option = option
-        self.result_image_path = result_image_path
-        # STEP 1: PREPROCESSING INPUT
-        # Read orginal image and its groundtruth
-        self.preprocess_input()
-
-        # STEP 2: CHECK WHETHER MODEL FAIL WITH ORIGINAL IMAGE OR NOT
-        # Create data which has format corresponding option
-        data, gt  = self.create_original_input()
-
-        # Conduct inference and format model result
-        dt = self.fit(inference_function, convert_output_function, data, gt)
-
-        # Evaluate
-        metric = self.evaluate(gt, dt)
-
-        # STEP 3: RUN TEST WITH CORRESPONDING OPTION
-        if self.check(metric, threshold, criterion):
-            # Get corresponding generator
-            image_generator = self.get_generator(option)
-
-            while True:
-                # Create data which has format corresponding option
-                data, gt = self.create_input(image_generator)
-                
-                # Conduct inference and format model result
-                dt = self.fit(inference_function, convert_output_function, data, gt)
-
-                # Evaluate
-                metric = self.evaluate(gt, dt)
-
-                # Check end condition
-                if self.check(metric, threshold, criterion) is False:
-                    self.update_report(option)
-                    # save images which model dectected incorrect
-                    self.save_images(data)
-                    break
-                
-        return self.make_report(option, verbose)
-
-    def clsf_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   criterion="precision",
-                   threshold=0.5,
-                   result_image_path=None,
-                   verbose=False):
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
-        """
-
-        self.model_type = 'clsf'
-        self.option = option
-        self.result_image_path = result_image_path
+    def transformation_test(self,
+                            inference_function,
+                            convert_output_function,
+                            option,
+                            criterion,
+                            threshold):
         # STEP 1: PREPROCESSING INPUT
         # Read orginal image and its groundtruth
         self.preprocess_input()
@@ -973,5 +825,114 @@ class Evaluation:
                     self.save_images(data, type_data='deadpoint')
                     self.save_images(self.penultimate_data, type_data='lastpoint')
                     break
+
+    def tdet_stats(self,
+                   inference_function,
+                   convert_output_function,
+                   option,
+                   criterion="precision",
+                   threshold=0.5,
+                   result_image_path=None,
+                   verbose=False):
+        """
+        Parameter:
+        inference_function: a function receive our test input and give
+        coresponding predicted sample.
+        convert_output_function: this function converts your model 
+        output according our format.
+        option: ["blurring", 
+                 "increasing_brightness", 
+                 "increasing_contrast", 
+                 "decreasing_brightness", 
+                 "decreasing_contrast", 
+                 "down_scale", 
+                 "crop"]
+        """
+
+        self.model_type = 'tdet'
+        self.option = option
+        self.result_image_path = result_image_path
+
+        self.transformation_test(
+            inference_function,
+            convert_output_function,
+            option,
+            criterion,
+            threshold
+        )
+                
+        return self.make_report(option, verbose)
+
+    def trecog_stats(self,
+                     inference_function,
+                     convert_output_function,
+                     option,
+                     criterion="precision",
+                     threshold=0.5,
+                     result_image_path=None,
+                     verbose=False):
+        """
+        Parameter:
+        inference_function: a function receive our test input and give
+        coresponding predicted sample.
+        convert_output_function: this function converts your model 
+        output according our format.
+        option: ["blurring", 
+                 "increasing_brightness", 
+                 "increasing_contrast", 
+                 "decreasing_brightness", 
+                 "decreasing_contrast", 
+                 "down_scale", 
+                 "crop"]
+        """
+
+        self.model_type = 'trecog'
+        self.option = option
+        self.result_image_path = result_image_path
+
+        self.transformation_test(
+            inference_function,
+            convert_output_function,
+            option,
+            criterion,
+            threshold
+        )
+                
+        return self.make_report(option, verbose)
+
+    def clsf_stats(self,
+                   inference_function,
+                   convert_output_function,
+                   option,
+                   criterion="precision",
+                   threshold=0.5,
+                   result_image_path=None,
+                   verbose=False):
+        """
+        Parameter:
+        inference_function: a function receive our test input and give
+        coresponding predicted sample.
+        convert_output_function: this function converts your model 
+        output according our format.
+        option: ["blurring", 
+                 "increasing_brightness", 
+                 "increasing_contrast", 
+                 "decreasing_brightness", 
+                 "decreasing_contrast", 
+                 "down_scale", 
+                 "crop"]
+        """
+
+        self.model_type = 'clsf'
+        self.option = option
+        self.result_image_path = result_image_path
+
+        self.transformation_test(
+            inference_function,
+            convert_output_function,
+            option,
+            criterion,
+            threshold
+        )
                 
         return self.make_report(option, verbose)
