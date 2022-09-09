@@ -1,7 +1,7 @@
 from mmocr.utils.ocr import MMOCR
 import cv2
 
-from ..mebit.metrics import Evaluation
+from ..metrics import Evaluation
 
 
 def inference_function(input):
@@ -18,9 +18,11 @@ def convert_output_function(predicted_sample):
                        'confidences': predicted_confidence}
     return formated_sample
 
+img = 'MEBIT/data/img_16.jpg'
+gt = 'MEBIT/data/gt_img_16.txt'
+# img = 'data/img_16.jpg'
+# gt = 'data/gt_img_16.txt'
 
-img = 'data/img_16.jpg'
-gt = 'data/gt_img_16.txt'
 option = ["blurring", 
           "increasing_brightness", 
           "increasing_contrast",

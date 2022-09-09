@@ -5,7 +5,7 @@ from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 import cv2
 
-from ..mebit.metrics import Evaluation
+from ..metrics import Evaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
@@ -20,7 +20,6 @@ def inference_function(input):
 def convert_output_function(predicted_sample):
     # print(predicted_sample)
     return predicted_sample
-
 
 img = 'data/word_1.png'
 gt = 'data/treg_gt.txt'

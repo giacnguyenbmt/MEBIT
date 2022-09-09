@@ -39,8 +39,6 @@ class Evaluation:
         self.keypoints = []
         self.masks = []
         self.bboxes = []
-        self.lastpoint_img_name = []
-        self.deadpoint_img_name = []
         
         self.report = {
             "blurring": {
@@ -438,46 +436,80 @@ class Evaluation:
         cv2.imwrite(name, new_img)
 
     def save_images(self, data, type_data='deadpoint'):
-        if self.result_image_path is not None:
-            if self.test_failed:
-                file_name = os.path.split(self.img_path)[-1]
-                _name, _extension = os.path.splitext(file_name)
+        # store name of saved images
+        img_names = []
 
-                if len(data) == 1:
-                    _new_name = _name \
-                        + "_{}_{}".format(self.option, type_data) \
-                        + _extension
-                    _path = os.path.join(
-                        self.result_image_path,
-                        'images',
-                        _new_name
-                    )
-                    self.save_image(_path, data[0])
-                    if type_data == 'deadpoint':
-                        self.lastpoint_img_name.append(_new_name)
-                    elif type_data == 'lastpoint':
-                        self.deadpoint_img_name.append(_new_name)
-                else:
-                    for i, img in enumerate(data):
-                        _new_name = _name \
-                            + "_{}_{}_{}".format(
-                                self.option, 
-                                i + 1,
-                                type_data
-                            ) \
-                            + _extension
-                        _path = os.path.join(
-                            self.result_image_path,
-                            'images',
-                            _new_name
-                        )
-                        self.save_image(_path, img)
-                        if type_data == 'deadpoint':
-                            self.lastpoint_img_name.append(_new_name)
-                        elif type_data == 'lastpoint':
-                            self.deadpoint_img_name.append(_new_name)
+        file_name = os.path.split(self.img_path)[-1]
+        _name, _extension = os.path.splitext(file_name)
+
+        if len(data) == 1:
+            _new_name = _name \
+                + "_{}_{}".format(self.option, type_data) \
+                + _extension
+            _path = os.path.join(
+                self.result_image_path,
+                'images',
+                _new_name
+            )
+            self.save_image(_path, data[0])
+            img_names.append(_new_name)
+        else:
+            for i, img in enumerate(data):
+                _new_name = _name \
+                    + "_{}_{}_{}".format(
+                        self.option, 
+                        i + 1,
+                        type_data
+                    ) \
+                    + _extension
+                _path = os.path.join(
+                    self.result_image_path,
+                    'images',
+                    _new_name
+                )
+                self.save_image(_path, img)
+                img_names.append(_new_name)
+        return img_names
     
-    def save_gt(self, gt):
+    def save_gt(self, gt, img_names):
+        if self.model_type == 'tdet':
+            if self.option == 'crop':
+                ...
+            else:
+                img_name = img_names[0]
+                _name, _ = os.path.splitext(img_name)
+                _new_name = _name + '.txt'
+                _path = os.path.join(
+                    self.result_image_path,
+                    'gt',
+                    _new_name
+                )
+                # contents = ''
+                # for i, poly in gt['boxes']:
+                #     int_poly = [int(i) for i in poly]
+                #     one_line = '{},' * 8 + '{}' + '\n'
+                #     contents += one_line.format(
+                #         *int_poly, 
+                #         gt['texts'][i]
+                #     )
+                # with open(_path, 'w') as f:
+                #     f.write(contents)
+                    
+        elif self.model_type == 'trecog':
+            ...
+        elif self.model_type == 'clsf':
+            for i, img_name in enumerate(img_names):
+                _name, _ = os.path.splitext(img_name)
+                _new_name = _name + '.txt'
+                _path = os.path.join(
+                    self.result_image_path,
+                    'gt',
+                    _new_name
+                )
+                with open(_path, 'w') as f:
+                    f.write(gt[i])
+    
+    def save_dt(self, dt, img_names):
         if self.model_type == 'tdet':
             if self.option == 'crop':
                 ...
@@ -486,29 +518,34 @@ class Evaluation:
         elif self.model_type == 'trecog':
             ...
         elif self.model_type == 'clsf':
-            ...
+            for i, img_name in enumerate(img_names):
+                _name, _ = os.path.splitext(img_name)
+                _new_name = _name + '.txt'
+                _path = os.path.join(
+                    self.result_image_path,
+                    'dt',
+                    _new_name
+                )
+                with open(_path, 'w') as f:
+                    f.write(dt[i])
     
-    def save_dt(self, dt):
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                ...
-            else:
-                ...
-        elif self.model_type == 'trecog':
-            ...
-        elif self.model_type == 'clsf':
-            ...
-    
-    def log(self, data, gt, dt, metric):
+    def log(self, data, gt, dt, metric=None):
+        if (self.result_image_path is None 
+            or self.test_failed is False):
+            return
+
         # last point
-        self.save_images(self.penultimate_data, type_data='lastpoint')
-        self.save_gt(self.penultimate_gt)
-        self.save_dt(self.penultimate_dt)
+        img_names = self.save_images(
+            self.penultimate_data, 
+            type_data='lastpoint'
+        )
+        self.save_gt(self.penultimate_gt, img_names)
+        self.save_dt(self.penultimate_dt, img_names)
 
         # dead point
-        self.save_images(data, type_data='deadpoint')
-        self.save_gt(gt)
-        self.save_dt(dt)
+        img_names = self.save_images(data, type_data='deadpoint')
+        self.save_gt(gt, img_names)
+        self.save_dt(dt, img_names)
 
     def update_report(self, option):
         self.report[option]['value'] = self.limit
@@ -862,9 +899,7 @@ class Evaluation:
                 # Check end condition
                 if self.check(metric, threshold, criterion) is False:
                     self.update_report(option)
-                    # save log point at which model dectected incorrect
-                    self.save_images(data, type_data='deadpoint')
-                    self.save_images(self.penultimate_data, type_data='lastpoint')
+                    self.log(data, gt, dt)
                     break
 
     #======================================================
