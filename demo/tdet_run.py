@@ -1,7 +1,7 @@
 from mmocr.utils.ocr import MMOCR
 import cv2
 
-from mebit.metrics import Evaluation
+from ..mebit.metrics import Evaluation
 
 
 def inference_function(input):
