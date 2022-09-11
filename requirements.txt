@@ -1,0 +1,7 @@
+Polygon3
+python-Levenshtein
+pycocotools
+scikit-learn
+numpy
+opencv-python
+albumentations

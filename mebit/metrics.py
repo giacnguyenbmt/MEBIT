@@ -496,7 +496,26 @@ class Evaluation:
                 #     f.write(contents)
                     
         elif self.model_type == 'trecog':
-            ...
+            for i, img_name in enumerate(img_names):
+                txt_name = os.path.split(self.img_path)[-1]
+                txt_name = os.path.splitext(txt_name)[0]
+
+                # get type: lastpoint or deadpoint
+                type_status = os.path.splitext(img_name)[0][-8:]
+                txt_path = '{}_{}_{}.txt'.format(
+                    txt_name,
+                    self.option,
+                    type_status
+                )
+
+                _path = os.path.join(
+                    self.result_image_path,
+                    'gt',
+                    txt_path
+                )
+                with open(_path, 'w') as f:
+                    f.write('{}, "{}"'.format(img_name, gt[i]))
+
         elif self.model_type == 'clsf':
             for i, img_name in enumerate(img_names):
                 _name, _ = os.path.splitext(img_name)
@@ -516,7 +535,26 @@ class Evaluation:
             else:
                 ...
         elif self.model_type == 'trecog':
-            ...
+            for i, img_name in enumerate(img_names):
+                txt_name = os.path.split(self.img_path)[-1]
+                txt_name = os.path.splitext(txt_name)[0]
+
+                # get type: lastpoint or deadpoint
+                type_status = os.path.splitext(img_name)[0][-8:]
+                txt_path = '{}_{}_{}.txt'.format(
+                    txt_name,
+                    self.option,
+                    type_status
+                )
+
+                _path = os.path.join(
+                    self.result_image_path,
+                    'gt',
+                    txt_path
+                )
+                with open(_path, 'w') as f:
+                    f.write('{}, "{}"'.format(img_name, dt[i]))
+
         elif self.model_type == 'clsf':
             for i, img_name in enumerate(img_names):
                 _name, _ = os.path.splitext(img_name)

@@ -1,6 +1,6 @@
 - write docstrings comment
 
-report ket qua cua mo hinh clsf
 report huong dan sd dung class
+add option in contrast test
 
 lay ket qua truoc khi model chet
