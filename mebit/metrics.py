@@ -1,3 +1,4 @@
+import enum
 import os
 import re
 import sys
@@ -399,27 +400,27 @@ class Evaluation:
         os.remove(annotation_file)
         return cocoGt
 
-    def tdet_result2coco(self, cocogt, res_file):
-        img_id = list(cocogt.imgs.keys())[0]
-        h, w = cocogt.imgs[img_id]['height'], cocogt.imgs[img_id]['width']
-        boundary_result = res_file['boxes']
-        score = res_file['confidences']
-        results = []
-        for i, poly in enumerate(boundary_result):
-            predict_seg = {
-                "image_id": img_id, 
-                "category_id": 1, 
-                "segmentation": mask.frPyObjects(
-                    [poly], 
-                    h, w
-                )[0], 
-                "score": score[i],
-            }
-            results.append(predict_seg)
+    # def tdet_result2coco(self, cocogt, res_file):
+    #     img_id = list(cocogt.imgs.keys())[0]
+    #     h, w = cocogt.imgs[img_id]['height'], cocogt.imgs[img_id]['width']
+    #     boundary_result = res_file['boxes']
+    #     score = res_file['confidences']
+    #     results = []
+    #     for i, poly in enumerate(boundary_result):
+    #         predict_seg = {
+    #             "image_id": img_id, 
+    #             "category_id": 1, 
+    #             "segmentation": mask.frPyObjects(
+    #                 [poly], 
+    #                 h, w
+    #             )[0], 
+    #             "score": score[i],
+    #         }
+    #         results.append(predict_seg)
 
-        with HiddenPrints():
-            cocodt=cocogt.loadRes(results)
-        return cocodt
+    #     with HiddenPrints():
+    #         cocodt=cocogt.loadRes(results)
+    #     return cocodt
 
     #======================================================
     #==================Log and report======================
@@ -474,16 +475,64 @@ class Evaluation:
     def save_gt(self, gt, img_names):
         if self.model_type == 'tdet':
             if self.option == 'crop':
-                ...
-            else:
-                img_name = img_names[0]
-                _name, _ = os.path.splitext(img_name)
-                _new_name = _name + '.txt'
+                dataset = gt.dataset
+                for i, img_name in enumerate(img_names):
+                    dataset['images'][i]['file_name'] = img_name
+                for i, ann in enumerate(dataset['annotations']):
+
+                    ann = ann['segmentation']['counts'].decode('ascii')
+                    dataset['annotations'][i] = ann
+
+                json_name = os.path.split(self.img_path)[-1]
+                json_name = os.path.splitext(json_name)[0]
+
+                # get type: lastpoint or deadpoint
+                type_status = os.path.splitext(img_name)[0][-8:]
+                json_path = '{}_{}_{}.json'.format(
+                    json_name,
+                    self.option,
+                    type_status
+                )
+
                 _path = os.path.join(
                     self.result_image_path,
                     'gt',
-                    _new_name
+                    json_path
                 )
+                
+                json_content = json.dumps(dataset)
+                with open(_path, 'w') as file:
+                    file.write(json_content)
+            else:
+                for i, img_name in enumerate(img_names):
+                    _name, _ = os.path.splitext(img_name)
+                    _new_name = _name + '.txt'
+                    _path = os.path.join(
+                        self.result_image_path,
+                        'gt',
+                        _new_name
+                    )
+
+                    contents = ''
+                    for i, poly in enumerate(gt['boxes']):
+                        int_poly = [int(i) for i in poly]
+                        oneline = '{},' * 8 + '{}\n'
+                        contents += oneline.format(
+                            *int_poly,
+                            gt['texts'][i]
+                        )
+                    
+                    with open(_path, 'w') as f:
+                        f.write(contents)
+
+                # img_name = img_names[0]
+                # _name, _ = os.path.splitext(img_name)
+                # _new_name = _name + '.txt'
+                # _path = os.path.join(
+                #     self.result_image_path,
+                #     'gt',
+                #     _new_name
+                # )
                 # contents = ''
                 # for i, poly in gt['boxes']:
                 #     int_poly = [int(i) for i in poly]
@@ -531,9 +580,67 @@ class Evaluation:
     def save_dt(self, dt, img_names):
         if self.model_type == 'tdet':
             if self.option == 'crop':
-                ...
+                img_name = img_names[0]
+                dt_list = dt.dt_list
+                new_dt_list = []
+                for i, ann in enumerate(dt_list):
+                    seg = ann['segmentation']
+                    seg["counts"] = seg["counts"].decode('ascii')
+                    instance_seg = {
+                        "image_id": ann["image_id"],
+                        "category_id": ann["category_id"],
+                        "segmentation": seg,
+                        "score": ann["score"]
+                    }
+                    new_dt_list.append(instance_seg)
+                print(type(new_dt_list['image_id']))
+                print(type(new_dt_list['category_id']))
+                print(type(new_dt_list['score']))
+                print(type(new_dt_list['segmentation']['size'][0]))
+                print(new_dt_list)
+                
+                json_name = os.path.split(self.img_path)[-1]
+                json_name = os.path.splitext(json_name)[0]
+
+                # get type: lastpoint or deadpoint
+                type_status = os.path.splitext(img_name)[0][-8:]
+                json_path = '{}_{}_{}.json'.format(
+                    json_name,
+                    self.option,
+                    type_status
+                )
+                
+                _path = os.path.join(
+                    self.result_image_path,
+                    'gt',
+                    json_path
+                )
+
+                json_content = json.dumps(dt_list)
+                with open(_path, 'w') as file:
+                    file.write(json_content)
+
             else:
-                ...
+                for i, img_name in enumerate(img_names):
+                    _name, _ = os.path.splitext(img_name)
+                    _new_name = _name + '.txt'
+                    _path = os.path.join(
+                        self.result_image_path,
+                        'dt',
+                        _new_name
+                    )
+
+                    contents = ''
+                    for i, poly in enumerate(dt['boxes']):
+                        int_poly = [int(i) for i in poly]
+                        oneline = '{},' * 7 + '{}\n'
+                        contents += oneline.format(
+                            *int_poly,
+                            # gt['texts'][i]
+                        )
+                    
+                    with open(_path, 'w') as f:
+                        f.write(contents)
         elif self.model_type == 'trecog':
             for i, img_name in enumerate(img_names):
                 txt_name = os.path.split(self.img_path)[-1]
@@ -888,6 +995,7 @@ class Evaluation:
                         dt_list.append(instance_seg)
                 with HiddenPrints():
                     dt = gt.loadRes(dt_list)
+                    dt.dt_list = dt_list
             else:
                 dt = results[0]
         elif self.model_type == 'trecog':

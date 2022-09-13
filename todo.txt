@@ -4,3 +4,7 @@ report huong dan sd dung class
 add option in contrast test
 
 lay ket qua truoc khi model chet
+
+select rotation transformation
+finish save_gt/dt
+write user manual
