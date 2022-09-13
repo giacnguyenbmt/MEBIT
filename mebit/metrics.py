@@ -15,6 +15,7 @@ from sklearn.metrics import precision_score, recall_score
 
 from .utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 from .utils import script
+from .utils import transforms as T
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
@@ -135,6 +136,25 @@ class Evaluation:
                 interpolation=1, 
                 always_apply=False, 
                 p=1)], 
+            keypoint_params=A.KeypointParams(format='xy', 
+                                             remove_invisible=False),
+            bbox_params=A.BboxParams(format='coco')
+        )
+        transformed = transform(image=self.img, 
+                                masks=self.masks,
+                                keypoints=self.keypoints,
+                                bboxes=self.bboxes)
+        return transformed
+
+    def flip_rorate90(self, rotate_k=1, flip=False):
+        transform_list = [
+            T.Rotate90(k=rotate_k, always_apply=True, p=1.0)
+        ]
+        if flip:
+            transform_list.append(A.HorizontalFlip(p=1.0))
+
+        transform = A.Compose(
+            transform_list, 
             keypoint_params=A.KeypointParams(format='xy', 
                                              remove_invisible=False),
             bbox_params=A.BboxParams(format='coco')
@@ -299,6 +319,9 @@ class Evaluation:
             if denominator >= 15:
                 print("Reached the limit of the crop test!")
                 self.stop_generator = True
+    
+    def test_rotate90(self):
+        ...
 
     #======================================================
     #==================COCO DATASET TOOL=================== 
