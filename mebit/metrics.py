@@ -502,15 +502,17 @@ class Evaluation:
                 for i, img_name in enumerate(img_names):
                     dataset['images'][i]['file_name'] = img_name
                 for i, ann in enumerate(dataset['annotations']):
-
-                    ann = ann['segmentation']['counts'].decode('ascii')
-                    dataset['annotations'][i] = ann
+                    try:
+                        ann = ann['segmentation']['counts'].decode('ascii')
+                        dataset['annotations'][i] = ann
+                    except:
+                        pass
 
                 json_name = os.path.split(self.img_path)[-1]
                 json_name = os.path.splitext(json_name)[0]
 
                 # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-8:]
+                type_status = os.path.splitext(img_name)[0][-9:]
                 json_path = '{}_{}_{}.json'.format(
                     json_name,
                     self.option,
@@ -573,7 +575,7 @@ class Evaluation:
                 txt_name = os.path.splitext(txt_name)[0]
 
                 # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-8:]
+                type_status = os.path.splitext(img_name)[0][-9:]
                 txt_path = '{}_{}_{}.txt'.format(
                     txt_name,
                     self.option,
@@ -608,7 +610,11 @@ class Evaluation:
                 new_dt_list = []
                 for i, ann in enumerate(dt_list):
                     seg = ann['segmentation']
-                    seg["counts"] = seg["counts"].decode('ascii')
+                    try:
+                        seg["counts"] = seg["counts"].decode('ascii')
+                    except:
+                        pass
+
                     instance_seg = {
                         "image_id": ann["image_id"],
                         "category_id": ann["category_id"],
@@ -616,17 +622,12 @@ class Evaluation:
                         "score": ann["score"]
                     }
                     new_dt_list.append(instance_seg)
-                print(type(new_dt_list['image_id']))
-                print(type(new_dt_list['category_id']))
-                print(type(new_dt_list['score']))
-                print(type(new_dt_list['segmentation']['size'][0]))
-                print(new_dt_list)
                 
                 json_name = os.path.split(self.img_path)[-1]
                 json_name = os.path.splitext(json_name)[0]
 
                 # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-8:]
+                type_status = os.path.splitext(img_name)[0][-9:]
                 json_path = '{}_{}_{}.json'.format(
                     json_name,
                     self.option,
@@ -635,11 +636,11 @@ class Evaluation:
                 
                 _path = os.path.join(
                     self.result_image_path,
-                    'gt',
+                    'dt',
                     json_path
                 )
 
-                json_content = json.dumps(dt_list)
+                json_content = json.dumps(new_dt_list)
                 with open(_path, 'w') as file:
                     file.write(json_content)
 
@@ -670,7 +671,7 @@ class Evaluation:
                 txt_name = os.path.splitext(txt_name)[0]
 
                 # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-8:]
+                type_status = os.path.splitext(img_name)[0][-9:]
                 txt_path = '{}_{}_{}.txt'.format(
                     txt_name,
                     self.option,
@@ -679,7 +680,7 @@ class Evaluation:
 
                 _path = os.path.join(
                     self.result_image_path,
-                    'gt',
+                    'dt',
                     txt_path
                 )
                 with open(_path, 'w') as f:
