@@ -1,0 +1,14 @@
+- write docstrings comment
+
+report huong dan sd dung class
+add option in contrast test
+
+lay ket qua truoc khi model chet
+
+select rotation transformation
+finish save_gt/dt
+write user manual
+
+chia class (tdet, treg, clsf), tao ham rieng cho rotation
+
+check logging: text det, text recog
