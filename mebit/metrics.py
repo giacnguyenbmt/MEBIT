@@ -29,6 +29,30 @@ class HiddenPrints:
         sys.stdout = self._original_stdout
 
 class Evaluation:
+    keypoints = []
+    masks = []
+    bboxes = []
+    
+
+    def init_store_option_data(self, init_value=0, init_score=0):
+        _data = {
+            'penultimate': {
+                'data': None,
+                'gt': None,
+                'dt': None,
+                'score': init_score,
+                'value': init_value
+            },
+            'last': {
+                'data': None,
+                'gt': None,
+                'dt': None,
+                'score': init_score,
+                'value': init_value
+            },
+        }
+        return _data
+
     def __init__(self,
                  img_path,
                  gt_path,
@@ -36,48 +60,48 @@ class Evaluation:
         self.img_path = img_path
         self.gt_path = gt_path
         self.image_color = image_color
-
-        self.keypoints = []
-        self.masks = []
-        self.bboxes = []
-        
         self.report = {
             "blurring": {
                 'message': 'blur_limit', 
-                'value': 0, 
+                'storage': self.init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_blurring()},
             "increasing_brightness": {
                 'message': 'brightness_limit', 
-                'value': 0.0, 
+                'storage': self.init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_brightness()},
             "increasing_contrast": {
                 'message': 'contrast_limit', 
-                'value': 0.0, 
+                'storage': self.init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_contrast()},
             "decreasing_brightness": {
                 'message': 'brightness_limit', 
-                'value': 0.0, 
+                'storage': self.init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_brightness()},
             "decreasing_contrast": {
                 'message': 'contrast_limit', 
-                'value': 0.0, 
+                'storage': self.init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_contrast()},
             "down_scale": {
                 'message': 'max_ratio', 
-                'value': 1.0, 
+                'storage': self.init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_scale()},
             "crop": {
                 'message': 'alpha', 
-                'value': 1.0, 
+                'storage': self.init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_crop()},
-        }
+            "rotate90": {
+                'message': 'num_image', 
+                'storage': self.init_store_option_data(0, 0),
+                'note': 'higher is better',
+                'generator': ...},
+    }
 
     # =====================================================
     # ==============define transformation==================
@@ -703,7 +727,9 @@ class Evaluation:
                                                 self.report[option]['note'])
         if verbose is True:
             print(message)
-        return self.report[option]
+        
+        return None
+        # return self.report[option]
 
     #======================================================
     #===============Metrics and condition==================
