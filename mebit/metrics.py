@@ -1,4 +1,3 @@
-import enum
 import os
 import re
 import sys
@@ -141,7 +140,7 @@ class Evaluation:
                                              remove_invisible=False),
             bbox_params=A.BboxParams(format='coco')
         )
-        transformed = transform(image=self.img, 
+        transformed = transform(image=self.img,
                                 masks=self.masks,
                                 keypoints=self.keypoints,
                                 bboxes=self.bboxes)
@@ -160,7 +159,7 @@ class Evaluation:
                                              remove_invisible=False),
             bbox_params=A.BboxParams(format='coco')
         )
-        transformed = transform(image=self.img, 
+        transformed = transform(image=self.img,
                                 masks=self.masks,
                                 keypoints=self.keypoints,
                                 bboxes=self.bboxes)
@@ -422,28 +421,6 @@ class Evaluation:
             cocoGt=COCO(annotation_file)
         os.remove(annotation_file)
         return cocoGt
-
-    # def tdet_result2coco(self, cocogt, res_file):
-    #     img_id = list(cocogt.imgs.keys())[0]
-    #     h, w = cocogt.imgs[img_id]['height'], cocogt.imgs[img_id]['width']
-    #     boundary_result = res_file['boxes']
-    #     score = res_file['confidences']
-    #     results = []
-    #     for i, poly in enumerate(boundary_result):
-    #         predict_seg = {
-    #             "image_id": img_id, 
-    #             "category_id": 1, 
-    #             "segmentation": mask.frPyObjects(
-    #                 [poly], 
-    #                 h, w
-    #             )[0], 
-    #             "score": score[i],
-    #         }
-    #         results.append(predict_seg)
-
-    #     with HiddenPrints():
-    #         cocodt=cocogt.loadRes(results)
-    #     return cocodt
 
     #======================================================
     #==================Log and report======================

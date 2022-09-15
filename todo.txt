@@ -10,3 +10,5 @@ finish save_gt/dt
 write user manual
 
 chia class (tdet, treg, clsf), tao ham rieng cho rotation
+
+check logging: text det, text recog
