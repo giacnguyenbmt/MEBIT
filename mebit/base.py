@@ -19,38 +19,10 @@ from . import transforms as T
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
-class HiddenPrints:
-    def __enter__(self):
-        self._original_stdout = sys.stdout
-        sys.stdout = open(os.devnull, 'w')
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.stdout.close()
-        sys.stdout = self._original_stdout
-
-class Evaluation:
+class BaseEvaluation:
     keypoints = []
     masks = []
     bboxes = []
-    
-    def init_store_option_data(self, init_value=0, init_score=0):
-        _data = {
-            'penultimate': {
-                'data': None,
-                'gt': None,
-                'dt': None,
-                'score': init_score,
-                'value': init_value
-            },
-            'last': {
-                'data': None,
-                'gt': None,
-                'dt': None,
-                'score': init_score,
-                'value': init_value
-            },
-        }
-        return _data
 
     def __init__(self,
                  img_path,
@@ -101,6 +73,25 @@ class Evaluation:
                 'note': 'higher is better',
                 'generator': ...},
     }
+
+    def init_store_option_data(self, init_value=0, init_score=0):
+        _data = {
+            'penultimate': {
+                'data': None,
+                'gt': None,
+                'dt': None,
+                'score': init_score,
+                'value': init_value
+            },
+            'last': {
+                'data': None,
+                'gt': None,
+                'dt': None,
+                'score': init_score,
+                'value': init_value
+            },
+        }
+        return _data
 
     # =====================================================
     # ==============define transformation==================
