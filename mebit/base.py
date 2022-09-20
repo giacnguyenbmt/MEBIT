@@ -1,25 +1,17 @@
 import os
 import re
-import sys
-import json
+import abc
 
 import cv2
-import Levenshtein
 import numpy as np
 import albumentations as A
-from pycocotools import mask
-from pycocotools.coco import COCO
-from pycocotools.cocoeval import COCOeval
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.metrics import precision_score, recall_score
 
-from .utils import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
-from .utils import script
-from . import transforms as T
+from .metrics import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
+from . import base_transforms as T
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
-class BaseEvaluation:
+class BaseEvaluation(metaclass=abc.ABCMeta):
     keypoints = []
     masks = []
     bboxes = []
@@ -33,48 +25,48 @@ class BaseEvaluation:
         self.image_color = image_color
         self.report = {
             "blurring": {
-                'message': 'blur_limit', 
-                'storage': self.init_store_option_data(0, 0),
+                'message': 'blur_limit',
+                'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_blurring()},
             "increasing_brightness": {
-                'message': 'brightness_limit', 
-                'storage': self.init_store_option_data(0., 0),
+                'message': 'brightness_limit',
+                'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_brightness()},
             "increasing_contrast": {
-                'message': 'contrast_limit', 
-                'storage': self.init_store_option_data(0., 0),
+                'message': 'contrast_limit',
+                'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_contrast()},
             "decreasing_brightness": {
-                'message': 'brightness_limit', 
-                'storage': self.init_store_option_data(0., 0),
+                'message': 'brightness_limit',
+                'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_brightness()},
             "decreasing_contrast": {
-                'message': 'contrast_limit', 
-                'storage': self.init_store_option_data(0., 0),
+                'message': 'contrast_limit',
+                'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_contrast()},
             "down_scale": {
-                'message': 'max_ratio', 
-                'storage': self.init_store_option_data(1., 0),
+                'message': 'max_ratio',
+                'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_scale()},
             "crop": {
-                'message': 'alpha', 
-                'storage': self.init_store_option_data(1., 0),
+                'message': 'alpha',
+                'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_crop()},
             "rotate90": {
-                'message': 'num_image', 
-                'storage': self.init_store_option_data(0, 0),
+                'message': 'num_image',
+                'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': ...},
     }
 
-    def init_store_option_data(self, init_value=0, init_score=0):
+    def _init_store_option_data(self, init_value=0, init_score=0):
         _data = {
             'penultimate': {
                 'data': None,
@@ -338,105 +330,6 @@ class BaseEvaluation:
         ...
 
     #======================================================
-    #==================COCO DATASET TOOL=================== 
-    def find_bbox(self, polygon):
-        x = min([polygon[i] for i in range(0, len(polygon), 2)])
-        y = min([polygon[i] for i in range(1, len(polygon), 2)])
-        width = max([polygon[i] for i in range(0, len(polygon), 2)]) - x
-        height = max([polygon[i] for i in range(1, len(polygon), 2)]) - y
-        return [x, y, width, height]
-
-    def find_area(self, segmentation, height, width):
-        objs = mask.frPyObjects(segmentation, height, width)
-        area = mask.area(objs)
-        return float(area[0])
-
-    def text_infos_to_coco_dict(self, img_path, gt, width, height):
-        image_infos = {}
-
-        image_infos['images'] = [
-            {
-                'id': 1,
-                'width': width,
-                'height': height,
-                'file_name': img_path
-            }
-        ]
-
-        points_list = gt['points_list']
-        transcriptions_list = gt['transcriptions_list']
-        anns = []
-        id = 1
-        for index, polygon in enumerate(points_list): 
-            if transcriptions_list[index] != '###':
-                ann = {
-                    "id": id, 
-                    "image_id": 1, 
-                    "category_id": 1, 
-                    "segmentation": [polygon], 
-                    "area": self.find_area([polygon], height, width),
-                    "bbox": self.find_bbox(polygon), 
-                    "iscrowd": 0,
-                }
-                id += 1
-                anns.append(ann)
-        image_infos['annotations'] = anns
-
-        image_infos['categories'] = [
-            {'id': 1, 'name': 'text'}
-        ]
-        return image_infos
-
-    def albu_to_coco_dict(self, data, raw_gt):
-        image_infos = {
-            'images': [],
-            'annotations': [],
-            'categories': []
-        }
-
-        ann_id = 1
-        for img_id, img in enumerate(data):
-            image_infos['images'].append(
-                {
-                    'id': img_id + 1,
-                    'width': img.shape[1],
-                    'height': img.shape[0],
-                    'file_name': "data/alb_{}.jpg".format(img_id + 1)
-                }
-            )
-
-            for transformed_mask in raw_gt[img_id]['masks']:
-                mask_rle = mask.encode(np.asfortranarray(transformed_mask))
-                mask_rle['counts'] = mask_rle['counts'].decode('ascii')
-                ann = {
-                    "id": ann_id,
-                    "image_id": img_id + 1,
-                    "category_id": 1,
-                    "segmentation": mask_rle,
-                    "area": float(mask.area(mask_rle)),
-                    "bbox": mask.toBbox(mask_rle).tolist(),
-                    "iscrowd": 0,
-                }
-                image_infos['annotations'].append(ann)
-                ann_id += 1
-
-        image_infos['categories'] = [
-            {'id': 1, 'name': 'text'}
-        ]
-        return image_infos
-
-    def create_cocogt(self, coco_format):
-        # convert to COCO class
-        annotation_file = 'temp_gt.json'
-        json_content = json.dumps(coco_format)
-        with open(annotation_file, 'w') as file:
-            file.write(json_content)
-        with HiddenPrints():
-            cocoGt=COCO(annotation_file)
-        os.remove(annotation_file)
-        return cocoGt
-
-    #======================================================
     #==================Log and report======================
     def backup_data(self, data, gt, dt):
         self.penultimate_data = data
@@ -485,209 +378,14 @@ class BaseEvaluation:
                 self.save_image(_path, img)
                 img_names.append(_new_name)
         return img_names
-    
+
+    @abc.abstractmethod
     def save_gt(self, gt, img_names):
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                dataset = gt.dataset
-                for i, img_name in enumerate(img_names):
-                    dataset['images'][i]['file_name'] = img_name
-                for i, ann in enumerate(dataset['annotations']):
-                    try:
-                        ann = ann['segmentation']['counts'].decode('ascii')
-                        dataset['annotations'][i] = ann
-                    except:
-                        pass
-
-                json_name = os.path.split(self.img_path)[-1]
-                json_name = os.path.splitext(json_name)[0]
-
-                # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-9:]
-                json_path = '{}_{}_{}.json'.format(
-                    json_name,
-                    self.option,
-                    type_status
-                )
-
-                _path = os.path.join(
-                    self.result_image_path,
-                    'gt',
-                    json_path
-                )
-                
-                json_content = json.dumps(dataset)
-                with open(_path, 'w') as file:
-                    file.write(json_content)
-            else:
-                for i, img_name in enumerate(img_names):
-                    _name, _ = os.path.splitext(img_name)
-                    _new_name = _name + '.txt'
-                    _path = os.path.join(
-                        self.result_image_path,
-                        'gt',
-                        _new_name
-                    )
-
-                    contents = ''
-                    for i, poly in enumerate(gt['boxes']):
-                        int_poly = [int(i) for i in poly]
-                        oneline = '{},' * 8 + '{}\n'
-                        contents += oneline.format(
-                            *int_poly,
-                            gt['texts'][i]
-                        )
-                    
-                    with open(_path, 'w') as f:
-                        f.write(contents)
-
-                # img_name = img_names[0]
-                # _name, _ = os.path.splitext(img_name)
-                # _new_name = _name + '.txt'
-                # _path = os.path.join(
-                #     self.result_image_path,
-                #     'gt',
-                #     _new_name
-                # )
-                # contents = ''
-                # for i, poly in gt['boxes']:
-                #     int_poly = [int(i) for i in poly]
-                #     one_line = '{},' * 8 + '{}' + '\n'
-                #     contents += one_line.format(
-                #         *int_poly, 
-                #         gt['texts'][i]
-                #     )
-                # with open(_path, 'w') as f:
-                #     f.write(contents)
-                    
-        elif self.model_type == 'trecog':
-            for i, img_name in enumerate(img_names):
-                txt_name = os.path.split(self.img_path)[-1]
-                txt_name = os.path.splitext(txt_name)[0]
-
-                # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-9:]
-                txt_path = '{}_{}_{}.txt'.format(
-                    txt_name,
-                    self.option,
-                    type_status
-                )
-
-                _path = os.path.join(
-                    self.result_image_path,
-                    'gt',
-                    txt_path
-                )
-                with open(_path, 'w') as f:
-                    f.write('{}, "{}"'.format(img_name, gt[i]))
-
-        elif self.model_type == 'clsf':
-            for i, img_name in enumerate(img_names):
-                _name, _ = os.path.splitext(img_name)
-                _new_name = _name + '.txt'
-                _path = os.path.join(
-                    self.result_image_path,
-                    'gt',
-                    _new_name
-                )
-                with open(_path, 'w') as f:
-                    f.write(gt[i])
+        ...
     
+    @abc.abstractmethod
     def save_dt(self, dt, img_names):
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                img_name = img_names[0]
-                dt_list = dt.dt_list
-                new_dt_list = []
-                for i, ann in enumerate(dt_list):
-                    seg = ann['segmentation']
-                    try:
-                        seg["counts"] = seg["counts"].decode('ascii')
-                    except:
-                        pass
-
-                    instance_seg = {
-                        "image_id": ann["image_id"],
-                        "category_id": ann["category_id"],
-                        "segmentation": seg,
-                        "score": ann["score"]
-                    }
-                    new_dt_list.append(instance_seg)
-                
-                json_name = os.path.split(self.img_path)[-1]
-                json_name = os.path.splitext(json_name)[0]
-
-                # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-9:]
-                json_path = '{}_{}_{}.json'.format(
-                    json_name,
-                    self.option,
-                    type_status
-                )
-                
-                _path = os.path.join(
-                    self.result_image_path,
-                    'dt',
-                    json_path
-                )
-
-                json_content = json.dumps(new_dt_list)
-                with open(_path, 'w') as file:
-                    file.write(json_content)
-
-            else:
-                for i, img_name in enumerate(img_names):
-                    _name, _ = os.path.splitext(img_name)
-                    _new_name = _name + '.txt'
-                    _path = os.path.join(
-                        self.result_image_path,
-                        'dt',
-                        _new_name
-                    )
-
-                    contents = ''
-                    for i, poly in enumerate(dt['boxes']):
-                        int_poly = [int(i) for i in poly]
-                        oneline = '{},' * 7 + '{}\n'
-                        contents += oneline.format(
-                            *int_poly,
-                            # gt['texts'][i]
-                        )
-                    
-                    with open(_path, 'w') as f:
-                        f.write(contents)
-        elif self.model_type == 'trecog':
-            for i, img_name in enumerate(img_names):
-                txt_name = os.path.split(self.img_path)[-1]
-                txt_name = os.path.splitext(txt_name)[0]
-
-                # get type: lastpoint or deadpoint
-                type_status = os.path.splitext(img_name)[0][-9:]
-                txt_path = '{}_{}_{}.txt'.format(
-                    txt_name,
-                    self.option,
-                    type_status
-                )
-
-                _path = os.path.join(
-                    self.result_image_path,
-                    'dt',
-                    txt_path
-                )
-                with open(_path, 'w') as f:
-                    f.write('{}, "{}"'.format(img_name, dt[i]))
-
-        elif self.model_type == 'clsf':
-            for i, img_name in enumerate(img_names):
-                _name, _ = os.path.splitext(img_name)
-                _new_name = _name + '.txt'
-                _path = os.path.join(
-                    self.result_image_path,
-                    'dt',
-                    _new_name
-                )
-                with open(_path, 'w') as f:
-                    f.write(dt[i])
+        ...
     
     def log(self, data, gt, dt, metric=None):
         if (self.result_image_path is None 
@@ -723,100 +421,9 @@ class BaseEvaluation:
 
     #======================================================
     #===============Metrics and condition==================
-    def compute_accuracy(self, ground_truth, predictions, mode='per_char'):
-        """
-        Computes accuracy for text recognition
-        :param ground_truth:
-        :param predictions:
-        :param display: Whether to print values to stdout
-        :param mode: if 'per_char' is selected then
-                    single_label_accuracy = correct_predicted_char_nums_of_single_sample / single_label_char_nums
-                    avg_label_accuracy = sum(single_label_accuracy) / label_nums
-                    if 'full_sequence' is selected then
-                    single_label_accuracy = 1 if the prediction result is exactly the same as label else 0
-                    avg_label_accuracy = sum(single_label_accuracy) / label_nums
-        :return: avg_label_accuracy
-        """
-        if mode == 'per_char':
-
-            accuracy = []
-
-            for index, label in enumerate(ground_truth):
-                prediction = predictions[index]
-                total_count = len(label)
-                correct_count = 0
-                try:
-                    for i, tmp in enumerate(label):
-                        if tmp == prediction[i]:
-                            correct_count += 1
-                except IndexError:
-                    continue
-                finally:
-                    try:
-                        accuracy.append(correct_count / total_count)
-                    except ZeroDivisionError:
-                        if len(prediction) == 0:
-                            accuracy.append(1)
-                        else:
-                            accuracy.append(0)
-            avg_accuracy = np.mean(np.array(accuracy).astype(np.float32), axis=0)
-        elif mode == 'full_sequence':
-            try:
-                correct_count = 0
-                for index, label in enumerate(ground_truth):
-                    prediction = predictions[index]
-                    if prediction == label:
-                        correct_count += 1
-                avg_accuracy = correct_count / len(ground_truth)
-            except ZeroDivisionError:
-                if not predictions:
-                    avg_accuracy = 1
-                else:
-                    avg_accuracy = 0
-        else:
-            raise NotImplementedError('Other accuracy compute mode has not been implemented')
-
-        return avg_accuracy
-
-    def compute_levenshtein(self, ground_truth, predictions):
-        accuracy = []
-        for i, gt in enumerate(ground_truth):
-            accuracy.append(Levenshtein.distance(gt, predictions[i]))
-        return np.mean(np.array(accuracy).astype(np.float32), axis=0)
-
+    @abc.abstractmethod
     def evaluate(self, gt, dt):
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                # run evaluation
-                with HiddenPrints():
-                    cocoeval = COCOeval(gt, dt)
-                    cocoeval.evaluate()
-                    cocoeval.accumulate()
-                    cocoeval.summarize()
-                metric = {
-                    'ap' : cocoeval.stats[0],
-                    'ap_50' : cocoeval.stats[1],
-                    'ap_75' : cocoeval.stats[2]
-                }
-            else:
-                alias_func = script.evaluate_method_per_sample
-                metric = alias_func(gt, dt)
-                
-        elif self.model_type == 'trecog':
-            acc = self.compute_accuracy(gt, dt)
-            levenshtein_distance = self.compute_levenshtein(gt, dt)
-            metric = {
-                "accuracy": acc,
-                "levenshtein": levenshtein_distance
-            }
-        elif self.model_type == 'clsf':
-            metric = {
-                "accuracy": accuracy_score(gt, dt),
-                "precision": precision_score(gt, dt, average='micro'),
-                "recall": recall_score(gt, dt, average='micro'),
-                "f1": f1_score(gt, dt, average='micro')
-            }
-
+        metric = None
         return metric
 
     def check(self, metrics, threshold, criterion="precision"):
@@ -835,6 +442,10 @@ class BaseEvaluation:
 
     #======================================================
     #========================Process=======================
+    @abc.abstractmethod
+    def read_groundtruth(self):
+        ...
+
     def preprocess_input(self):
         # set param
         self.stop_generator = False
@@ -859,84 +470,28 @@ class BaseEvaluation:
         self.height, self.width, _ = self.img.shape
 
         # Read ground truth
-        if self.model_type == 'tdet':
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read()
-                self.points_list, _, self.transcriptions_list = read_gt(
-                    gt_file,
-                    CRLF=False,
-                    LTRB=False,
-                    withTranscription=True,
-                    withConfidence=False,
-                )
-            self.keypoints = [(self.points_list[j][i], 
-                                self.points_list[j][i + 1])
-                                for j in range(len(self.points_list)) 
-                                for i in range(0, 8, 2)]
-
-        elif self.model_type == 'trecog':
-            self.transcriptions_list = []
-            evaluationParams = {
-                'SAMPLE_NAME_2_ID':'(?:word_)?([0-9]+).png',
-                'CRLF':False,
-                'DOUBLE_QUOTES':True
-                }
-
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read()
-
-            gtLines = gt_file.split("\r\n" if evaluationParams['CRLF'] else "\n")
-            for line in gtLines:
-                line = line.replace("\r","").replace("\n","")
-                if(line != ""):
-                    if (evaluationParams['DOUBLE_QUOTES']):
-                        m = re.search(r'"(.+)"',line)
-                    else:
-                        m = re.search(r"'(.+)'",line)
-                    self.transcriptions_list.append(m.group()[1:-1])
-
-        elif self.model_type == 'clsf':
-            with open(self.gt_path, 'r') as file:
-                gt_file = file.read().replace('\n', '')
-                self.transcriptions_list = [gt_file]
+        self.read_groundtruth()
     
     def get_generator(self, option):
         return self.report.get(option).get('generator')
-        
+    
+    @abc.abstractmethod
+    def format_original_gt(self, *args):
+        gt = None
+        return gt
+
     def create_original_input(self):
         data = [self.img]
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                tdet_gt = {
-                    'points_list': self.points_list,
-                    'transcriptions_list': self.transcriptions_list
-                }
-                coco_format = self.text_infos_to_coco_dict(
-                    self.img_path,
-                    tdet_gt,
-                    self.width,
-                    self.height
-                )
-                gt = self.create_cocogt(coco_format)
-                # create masks from corresponding polygons
-                for id in gt.getAnnIds(imgIds=1):
-                    self.masks.append(gt.annToMask(gt.loadAnns(id)[0]))
-            else:
-                gt = {
-                    'boxes': self.points_list,
-                    'texts': self.transcriptions_list
-                }
-
-        elif self.model_type == 'trecog':
-            if self.option == 'crop':
-                gt = self.transcriptions_list
-            else:
-                gt = self.transcriptions_list
-        
-        elif self.model_type == 'clsf':
-            gt = self.transcriptions_list
+        # format gt
+        gt = self.format_original_gt()
 
         return data, gt
+
+    @abc.abstractmethod
+    def format_transform_gt(self, *args):
+        ...
+        gt = None
+        return gt
 
     def create_input(self, image_generator):
         """
@@ -947,42 +502,15 @@ class BaseEvaluation:
         data, raw_gt = next(image_generator)
 
         # Format data
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                coco_format = self.albu_to_coco_dict(data, raw_gt)
-                gt = self.create_cocogt(coco_format)
-            elif self.option == "down_scale":
-                keypoints = raw_gt[0]['keypoints']
-                new_points_list = [[keypoints[i][0], 
-                                    keypoints[i][1],
-                                    keypoints[i + 1][0],
-                                    keypoints[i + 1][1],
-                                    keypoints[i + 2][0],
-                                    keypoints[i + 2][1],
-                                    keypoints[i + 3][0],
-                                    keypoints[i + 3][1]] 
-                                   for i in range(0, len(keypoints), 4)]
-                gt = {
-                    'boxes': new_points_list,
-                    'texts': self.transcriptions_list
-                }
-            else:
-                gt = {
-                    'boxes': self.points_list,
-                    'texts': self.transcriptions_list
-                }
-        elif self.model_type  == 'trecog':
-            if self.option == 'crop':
-                gt = self.transcriptions_list * 9
-            else:
-                gt = self.transcriptions_list
-        elif self.model_type == 'clsf':
-            if self.option == 'crop':
-                gt = self.transcriptions_list * 9
-            else:
-                gt = self.transcriptions_list
+        gt = self.format_transform_gt(raw_gt)
 
         return data, gt
+
+    @abc.abstractmethod
+    def format_dt(self):
+        ...
+        dt = None
+        return dt
 
     def fit(self, inference_function, convert_output_function, data, gt):
         # get result from model
@@ -992,36 +520,9 @@ class BaseEvaluation:
             converted_result = convert_output_function(predicted_result)
             results.append(converted_result)
 
-        # format result
-        if self.model_type == 'tdet':
-            if self.option == 'crop':
-                dt_list = []
-                for i, rs in enumerate(results):
-                    img_infos = gt.dataset['images'][i]
-                    img_id = img_infos['id']
-                    h, w = img_infos['height'], img_infos['width']
-                    for j, poly in enumerate(rs['boxes']):
-                        instance_seg = {
-                            "image_id": img_id,
-                            "category_id": 1,
-                            "segmentation": mask.frPyObjects(
-                                [poly], 
-                                h, w)[0],
-                            "score": rs['confidences'][j]
-                        }
-                        dt_list.append(instance_seg)
-                with HiddenPrints():
-                    dt = gt.loadRes(dt_list)
-                    dt.dt_list = dt_list
-            else:
-                dt = results[0]
-        elif self.model_type == 'trecog':
-            if self.option == 'crop':
-                dt = results
-            else:
-                dt = results
-        elif self.model_type == 'clsf':
-            dt = results
+        # format predicted result
+        dt = self.format_dt
+
         return dt
 
     def test_transformation(self,
@@ -1067,15 +568,14 @@ class BaseEvaluation:
 
     #======================================================
     #====================Main function=====================
-
-    def tdet_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   criterion="precision",
-                   threshold=0.5,
-                   result_image_path=None,
-                   verbose=False):
+    def stats(self,
+              inference_function,
+              convert_output_function,
+              option,
+              criterion="precision",
+              threshold=0.5,
+              result_image_path=None,
+              verbose=False):
         """
         Parameter:
         inference_function: a function receive our test input and give
@@ -1091,81 +591,7 @@ class BaseEvaluation:
                  "crop"]
         """
 
-        self.model_type = 'tdet'
-        self.option = option
-        self.result_image_path = result_image_path
-
-        self.test_transformation(
-            inference_function,
-            convert_output_function,
-            option,
-            criterion,
-            threshold
-        )
-                
-        return self.make_report(option, verbose)
-
-    def trecog_stats(self,
-                     inference_function,
-                     convert_output_function,
-                     option,
-                     criterion="precision",
-                     threshold=0.5,
-                     result_image_path=None,
-                     verbose=False):
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
-        """
-
-        self.model_type = 'trecog'
-        self.option = option
-        self.result_image_path = result_image_path
-
-        self.test_transformation(
-            inference_function,
-            convert_output_function,
-            option,
-            criterion,
-            threshold
-        )
-                
-        return self.make_report(option, verbose)
-
-    def clsf_stats(self,
-                   inference_function,
-                   convert_output_function,
-                   option,
-                   criterion="precision",
-                   threshold=0.5,
-                   result_image_path=None,
-                   verbose=False):
-        """
-        Parameter:
-        inference_function: a function receive our test input and give
-        coresponding predicted sample.
-        convert_output_function: this function converts your model 
-        output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
-        """
-
-        self.model_type = 'clsf'
+        # self.model_type = 'tdet'
         self.option = option
         self.result_image_path = result_image_path
 
