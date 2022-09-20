@@ -7,7 +7,7 @@ import numpy as np
 import albumentations as A
 
 from .metrics import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
-from . import base_transforms as T
+from .utils import base_transforms as T
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
@@ -28,43 +28,51 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'message': 'blur_limit',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_blurring()},
+                'generator': self.test_blurring()
+            },
             "increasing_brightness": {
                 'message': 'brightness_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
-                'generator': self.test_increasing_brightness()},
+                'generator': self.test_increasing_brightness()
+            },
             "increasing_contrast": {
                 'message': 'contrast_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
-                'generator': self.test_increasing_contrast()},
+                'generator': self.test_increasing_contrast()
+            },
             "decreasing_brightness": {
                 'message': 'brightness_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
-                'generator': self.test_decreasing_brightness()},
+                'generator': self.test_decreasing_brightness()
+            },
             "decreasing_contrast": {
                 'message': 'contrast_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
-                'generator': self.test_decreasing_contrast()},
+                'generator': self.test_decreasing_contrast()
+            },
             "down_scale": {
                 'message': 'max_ratio',
                 'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
-                'generator': self.test_scale()},
+                'generator': self.test_scale()
+            },
             "crop": {
                 'message': 'alpha',
                 'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
-                'generator': self.test_crop()},
+                'generator': self.test_crop()
+            },
             "rotate90": {
                 'message': 'num_image',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': ...},
-    }
+                'generator': ...
+            },
+        }
 
     def _init_store_option_data(self, init_value=0, init_score=0):
         _data = {
@@ -442,10 +450,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
     #======================================================
     #========================Process=======================
-    @abc.abstractmethod
-    def read_groundtruth(self):
-        ...
-
     def preprocess_input(self):
         # set param
         self.stop_generator = False
@@ -471,25 +475,22 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         # Read ground truth
         self.read_groundtruth()
+        
+    @abc.abstractmethod
+    def read_groundtruth(self):
+        ...
     
     def get_generator(self, option):
         return self.report.get(option).get('generator')
     
-    @abc.abstractmethod
-    def format_original_gt(self, *args):
-        gt = None
-        return gt
-
     def create_original_input(self):
         data = [self.img]
         # format gt
         gt = self.format_original_gt()
-
         return data, gt
 
     @abc.abstractmethod
-    def format_transform_gt(self, *args):
-        ...
+    def format_original_gt(self, *args, **kwargs):
         gt = None
         return gt
 
@@ -500,17 +501,14 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         
         # Get data from generator
         data, raw_gt = next(image_generator)
-
         # Format data
         gt = self.format_transform_gt(raw_gt)
-
         return data, gt
 
     @abc.abstractmethod
-    def format_dt(self):
-        ...
-        dt = None
-        return dt
+    def format_transform_gt(self, *args, **kwargs):
+        gt = None
+        return gt
 
     def fit(self, inference_function, convert_output_function, data, gt):
         # get result from model
@@ -521,8 +519,13 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             results.append(converted_result)
 
         # format predicted result
-        dt = self.format_dt
+        dt = self.format_dt()
 
+        return dt
+
+    @abc.abstractmethod
+    def format_dt(self, *args, **kwargs):
+        dt = None
         return dt
 
     def test_transformation(self,
@@ -591,7 +594,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                  "crop"]
         """
 
-        # self.model_type = 'tdet'
         self.option = option
         self.result_image_path = result_image_path
 
