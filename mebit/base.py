@@ -202,7 +202,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         while True:
             transformed = trans.resize(
                 ratio,
-                image=self.image,
+                image=self.data,
                 masks=self.masks,
                 keypoints=self.keypoints,
                 bboxes=self.bboxes
@@ -254,7 +254,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             for _, coord in enumerate(new_coords):
                 transformed = trans.crop(
                     *coord,
-                    image=self.image,
+                    image=self.data,
                     masks=self.masks,
                     keypoints=self.keypoints,
                     bboxes=self.bboxes
