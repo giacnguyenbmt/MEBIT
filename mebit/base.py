@@ -1,5 +1,4 @@
 import os
-import re
 import abc
 
 import cv2
@@ -15,14 +14,16 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     keypoints = []
     masks = []
     bboxes = []
+    valid_option_list = []
 
     def __init__(self,
-                 img_path,
-                 gt_path,
+                 data,
+                 gt,
                  image_color='rgb') -> None:
-        self.img_path = img_path
-        self.gt_path = gt_path
+        self.data = data
+        self.gt = gt
         self.image_color = image_color
+        self.height, self.width, _ = self.data.shape
         self.report = {
             "blurring": {
                 'message': 'blur_limit',
@@ -70,7 +71,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'message': 'num_image',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': ...
+                'generator': self.test_rotate90()
             },
         }
 
@@ -455,7 +456,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.stop_generator = False
 
         # check option
-        assert (self.option in self.report.keys()), 'Invalid option'
+        assert (self.option in self.valid_option_list), 'Invalid option'
 
         # Create a folder to store result
         if self.result_image_path is not None:
@@ -585,13 +586,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         coresponding predicted sample.
         convert_output_function: this function converts your model 
         output according our format.
-        option: ["blurring", 
-                 "increasing_brightness", 
-                 "increasing_contrast", 
-                 "decreasing_brightness", 
-                 "decreasing_contrast", 
-                 "down_scale", 
-                 "crop"]
         """
 
         self.option = option

@@ -1,4 +1,5 @@
 import os
+import cv2
 
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.metrics import precision_score, recall_score
@@ -7,6 +8,58 @@ from .base import BaseEvaluation
 from .utils.util import HiddenPrints
 
 class ClsfEvaluation(BaseEvaluation):
+    valid_option_list = [
+        "blurring", 
+        "increasing_brightness", 
+        "increasing_contrast", 
+        "decreasing_brightness", 
+        "decreasing_contrast", 
+        "down_scale", 
+        "crop",
+    ]
+
+    @classmethod
+    def from_input_path(cls, 
+                        img_path, 
+                        gt_path, 
+                        image_color='rgb'):
+        # Read image
+        BGR_img = cv2.imread(img_path)
+        if image_color == 'rgb':
+            img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
+        elif image_color == 'bgr':
+            img = BGR_img
+        data = img
+
+        # Read ground truth
+        with open(gt_path, 'r') as file:
+            gt_file = file.read().replace('\n', '')
+            transcriptions_list = [gt_file]
+            gt = transcriptions_list
+
+        return cls(data, gt, image_color)
+
+    @classmethod
+    def from_coco_input_path(cls, 
+                             img_path, 
+                             gt_path, 
+                             image_color='rgb'):
+        # Read image
+        BGR_img = cv2.imread(img_path)
+        if image_color == 'rgb':
+            img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
+        elif image_color == 'bgr':
+            img = BGR_img
+        data = img
+
+        # Read ground truth
+        with open(gt_path, 'r') as file:
+            gt_file = file.read().replace('\n', '')
+            transcriptions_list = [gt_file]
+            gt = transcriptions_list
+
+        return cls(data, gt, image_color)
+
     def save_gt(self, gt, img_names):
         for i, img_name in enumerate(img_names):
             _name, _ = os.path.splitext(img_name)
