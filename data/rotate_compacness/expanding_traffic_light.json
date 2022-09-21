@@ -1,0 +1,33 @@
+{
+    "images": [
+        {
+            "file_name": "expanding_traffic_light.png",
+            "height": 810,
+            "width": 800,
+            "id": 0
+        }
+    ],
+    "categories": [
+        {
+            "supercategory": "Defect",
+            "id": 1,
+            "name": "red"
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 0,
+            "bbox": [
+                383.0,
+                279.0,
+                34.0,
+                65.0
+            ],
+            "area": 2210,
+            "iscrowd": 0,
+            "category_id": 1,
+            "segmentation": []
+        }
+    ]
+}
