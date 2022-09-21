@@ -359,8 +359,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         _value = self.report[option]['storage']['value']
         message = "{}: \n{} = {} \n({})".format(option,
                                                 _mess,
-                                                _note,
-                                                _value)
+                                                _value,
+                                                _note)
         if verbose is True:
             print(message)
         
