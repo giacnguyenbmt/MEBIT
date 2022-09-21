@@ -354,11 +354,13 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.report[option]['storage']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
-        storage = self.report[option]['storage']
+        _mess = self.report[option]['message']
+        _note = self.report[option]['note']
+        _value = self.report[option]['storage']['value']
         message = "{}: \n{} = {} \n({})".format(option,
-                                                storage['message'],
-                                                storage['value'],
-                                                storage['note'])
+                                                _mess,
+                                                _note,
+                                                _value)
         if verbose is True:
             print(message)
         
