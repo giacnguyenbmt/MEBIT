@@ -3,10 +3,9 @@ import abc
 
 import cv2
 import numpy as np
-import albumentations as A
 
 from .metrics import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
-from .utils import base_transforms as T
+from .transforms import definded_transforms as trans
 
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
@@ -14,6 +13,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     keypoints = []
     masks = []
     bboxes = []
+    # valid option list is detailed in subclass
     valid_option_list = []
 
     def __init__(self,
@@ -93,99 +93,15 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             },
         }
         return _data
-
-    # =====================================================
-    # ==============define transformation==================
-    def blur(self, blur_limit):
-        transform = A.Compose([
-            A.Blur(blur_limit=(blur_limit, blur_limit + 1), p=1.0),
-        ])
-        transformed = transform(image=self.img)
-        return transformed
-
-    def brightness(self, brightness_limit):
-        transform = A.Compose([
-            A.RandomBrightnessContrast(
-                brightness_limit=[brightness_limit, 
-                                  brightness_limit+0.001],
-                contrast_limit=0, 
-                brightness_by_max=True, 
-                always_apply=False, 
-                p=1.0),
-        ])
-        transformed = transform(image=self.img)
-        return transformed
-
-    def contrast(self, contrast_limit):
-        transform = A.Compose([
-            A.RandomBrightnessContrast(brightness_limit=0, 
-                contrast_limit=[contrast_limit, contrast_limit + 0.001], 
-                brightness_by_max=True, 
-                always_apply=False, 
-                p=1.0),
-        ])
-        transformed = transform(image=self.img)
-        return transformed
-
-    def crop(self, x_min, y_min, x_max, y_max):
-        transform = A.Compose(
-            [A.Crop(x_min, y_min, x_max, y_max)], 
-            keypoint_params=A.KeypointParams(format='xy', 
-                                            remove_invisible=False),
-            bbox_params=A.BboxParams(format='coco')
-        )
-        transformed = transform(image=self.img, 
-                                masks=self.masks,
-                                keypoints=self.keypoints,
-                                bboxes=self.bboxes)
-        return transformed
-
-    def resize(self, ratio):
-        h = int(self.height * ratio)
-        w = int(self.width * ratio)
-
-        transform = A.Compose(
-            [A.Resize(
-                height=h, 
-                width=w, 
-                interpolation=1, 
-                always_apply=False, 
-                p=1)], 
-            keypoint_params=A.KeypointParams(format='xy', 
-                                             remove_invisible=False),
-            bbox_params=A.BboxParams(format='coco')
-        )
-        transformed = transform(image=self.img,
-                                masks=self.masks,
-                                keypoints=self.keypoints,
-                                bboxes=self.bboxes)
-        return transformed
-
-    def flip_rorate90(self, rotate_k=1, flip=False):
-        transform_list = [
-            T.Rotate90(k=rotate_k, always_apply=True, p=1.0)
-        ]
-        if flip:
-            transform_list.append(A.HorizontalFlip(p=1.0))
-
-        transform = A.Compose(
-            transform_list, 
-            keypoint_params=A.KeypointParams(format='xy', 
-                                             remove_invisible=False),
-            bbox_params=A.BboxParams(format='coco')
-        )
-        transformed = transform(image=self.img,
-                                masks=self.masks,
-                                keypoints=self.keypoints,
-                                bboxes=self.bboxes)
-        return transformed
-
+    
     #======================================================
     #==============split transformation test===============
     def test_blurring(self):
         blur_limit = 3
         while True:
-            transformed = self.blur(blur_limit)
+            transformed = trans.blur(
+                blur_limit, image=self.data
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -202,7 +118,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     def test_increasing_brightness(self):
         brightness_limit = 0
         while True:
-            transformed = self.brightness(brightness_limit)
+            transformed = trans.brightness(
+                brightness_limit, image=self.data
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -220,7 +138,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         contrast_limit = 0
         amout = 0.1
         while True:
-            transformed = self.contrast(contrast_limit)
+            transformed = trans.contrast(
+                contrast_limit, image=self.data
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -239,7 +159,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     def test_decreasing_brightness(self):
         brightness_limit = 0
         while True:
-            transformed = self.brightness(brightness_limit)
+            transformed = trans.brightness(
+                brightness_limit, image=self.data
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -257,7 +179,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         contrast_limit = 0
         amout = 0.1
         while True:
-            transformed = self.contrast(contrast_limit)
+            transformed = trans.contrast(
+                contrast_limit, image=self.data
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -276,7 +200,13 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     def test_scale(self):
         ratio = 0.9
         while True:
-            transformed = self.resize(ratio)
+            transformed = trans.resize(
+                ratio,
+                image=self.image,
+                masks=self.masks,
+                keypoints=self.keypoints,
+                bboxes=self.bboxes
+            )
             data = [transformed['image']]
             del transformed['image']
             raw_gt = [transformed]
@@ -322,7 +252,13 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             new_coords = new_coords.astype(int)    
 
             for _, coord in enumerate(new_coords):
-                transformed = self.crop(*coord)
+                transformed = trans.crop(
+                    *coord,
+                    image=self.image,
+                    masks=self.masks,
+                    keypoints=self.keypoints,
+                    bboxes=self.bboxes
+                )
                 data.append(transformed['image'])
                 del transformed['image']
                 raw_gt.append(transformed)
@@ -415,7 +351,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.save_dt(dt, img_names)
 
     def update_report(self, option):
-        self.report[option]['value'] = self.limit
+        self.report[option]['storage']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
         message = "{}: \n{} = {} \n({})".format(option,
@@ -465,27 +401,20 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 os.makedirs(os.path.join(self.result_image_path, 'gt'))
                 os.makedirs(os.path.join(self.result_image_path, 'dt'))
 
-        # Read image
-        BGR_img = cv2.imread(self.img_path)
-        if self.image_color == 'rgb':
-            self.img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
-        elif self.image_color == 'bgr':
-            self.img = BGR_img
-
-        self.height, self.width, _ = self.img.shape
+        self.height, self.width, _ = self.data.shape
 
         # Read ground truth
-        self.read_groundtruth()
+        # self.read_groundtruth()
         
-    @abc.abstractmethod
-    def read_groundtruth(self):
-        ...
+    # @abc.abstractmethod
+    # def read_groundtruth(self):
+    #     ...
     
     def get_generator(self, option):
         return self.report.get(option).get('generator')
     
     def create_original_input(self):
-        data = [self.img]
+        data = [self.data]
         # format gt
         gt = self.format_original_gt()
         return data, gt
@@ -503,11 +432,11 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # Get data from generator
         data, raw_gt = next(image_generator)
         # Format data
-        gt = self.format_transform_gt(raw_gt)
+        gt = self.format_transformed_gt(raw_gt, data=data)
         return data, gt
 
     @abc.abstractmethod
-    def format_transform_gt(self, *args, **kwargs):
+    def format_transformed_gt(self, *args, **kwargs):
         gt = None
         return gt
 
@@ -520,7 +449,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             results.append(converted_result)
 
         # format predicted result
-        dt = self.format_dt()
+        dt = self.format_dt(results=results)
 
         return dt
 
