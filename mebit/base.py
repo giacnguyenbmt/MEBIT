@@ -305,6 +305,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             
             raw_data = transformed['image']
             x, y, w, h, _ = transformed['bboxes'][0]
+            x, y, w, h = np.array([x, y, w, h]).round().astype(int)
             data = [raw_data[y:y + h, x:x + w]]
 
             del transformed['image']
@@ -332,6 +333,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             
             raw_data = transformed['image']
             x, y, w, h, _ = transformed['bboxes'][0]
+            x, y, w, h = np.array([x, y, w, h]).round().astype(int)
             data = [raw_data[y:y + h, x:x + w]]
 
             del transformed['image']
@@ -354,8 +356,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             alpha = np.sqrt(1 / compacness_limit)
             new_w = round(w * alpha)
             new_h = round(h * alpha)
-            new_x = x - round((new_w - w) / 2)
-            new_y = y - round((new_h - h) / 2)
+            new_x = int(x - round((new_w - w) / 2))
+            new_y = int(y - round((new_h - h) / 2))
             data = [raw_data[new_y:new_y + new_h, new_x:new_x + new_w]]
 
             self.limit = compacness_limit
@@ -579,7 +581,10 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 # Conduct inference and format model result
                 dt = self.fit(inference_function, convert_output_function, data, gt)
 
+                print('==============')
+                print(gt, dt)
                 metric = self.evaluate(gt, dt)
+                print(metric)
 
                 # Check end condition
                 if self.check(metric, threshold, criterion) is False:

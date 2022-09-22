@@ -61,7 +61,7 @@ class ClsfEvaluation(BaseEvaluation):
             gt = COCO(gt_path)
 
         instance = cls(data, gt, image_color)
-        key = instance.gt.anns.keys()[0]
+        key = list(instance.gt.anns.keys())[0]
         ann = instance.gt.anns[key]
         category_id = ann['category_id']
         cat_name = gt.cats[category_id]['name']
@@ -103,8 +103,9 @@ class ClsfEvaluation(BaseEvaluation):
         return metric
 
     def create_original_input(self):
-        if self.option in ['test_left_rotation', 'test_left_rotation']:
+        if self.option in ['left_rotation', 'left_rotation']:
             x, y, w, h, cat_ = self.bboxes[0]
+            x, y, w, h = map(int, [x, y, w, h])
             data = [self.data[y:y + h, x:x + w]]
             gt = [cat_]
         else:
@@ -117,7 +118,7 @@ class ClsfEvaluation(BaseEvaluation):
             num_record = len(kwargs['data'])
         else:
             num_record = 1
-        if self.option in ['test_left_rotation', 'test_left_rotation']:
+        if self.option in ['left_rotation', 'left_rotation']:
             gt = self.bboxes[0][-1:] * num_record
         else:
             gt = self.gt * num_record
