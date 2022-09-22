@@ -73,6 +73,24 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'note': 'higher is better',
                 'generator': self.test_rotate90()
             },
+            "left_rotation": {
+                'message': 'rotation_limit',
+                'storage': self._init_store_option_data(0, 0),
+                'note': 'higher is better',
+                'generator': self.test_left_rotation()
+            },
+            "right_rotation": {
+                'message': 'rotation_limit',
+                'storage': self._init_store_option_data(0, 0),
+                'note': 'lower is better',
+                'generator': self.test_right_rotation()
+            },
+            "compactness": {
+                'message': 'compacness_limit',
+                'storage': self._init_store_option_data(0, 0),
+                'note': 'lower is better',
+                'generator': self.test_compactness()
+            }
         }
 
     def _init_store_option_data(self, init_value=0, init_score=0):
@@ -493,11 +511,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # format gt
         gt = self.gt
         return data, gt
-
-    # @abc.abstractmethod
-    # def format_original_gt(self, *args, **kwargs):
-    #     gt = None
-    #     return gt
 
     def create_input(self, image_generator):
         """

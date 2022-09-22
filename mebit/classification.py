@@ -17,6 +17,9 @@ class ClsfEvaluation(BaseEvaluation):
         "decreasing_contrast", 
         "down_scale", 
         "crop",
+        "left_rotation",
+        "right_rotation",
+        "compactness",
     ]
 
     @classmethod
@@ -98,10 +101,6 @@ class ClsfEvaluation(BaseEvaluation):
             "f1": f1_score(gt, dt, average='micro')
         }
         return metric
-
-    # def format_original_gt(self, *args, **kwargs):
-    #     gt = self.gt
-    #     return gt
 
     def create_original_input(self):
         if self.option in ['test_left_rotation', 'test_left_rotation']:
