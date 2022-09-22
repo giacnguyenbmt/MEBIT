@@ -71,7 +71,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'message': 'num_image',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_rotate90()
+                'generator': self.test_90_rotation()
             },
             "left_rotation": {
                 'message': 'rotation_limit',
