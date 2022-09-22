@@ -1,6 +1,7 @@
 import os
 
 import cv2
+from pycocotools.coco import COCO
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.metrics import precision_score, recall_score
 
@@ -53,12 +54,17 @@ class ClsfEvaluation(BaseEvaluation):
         data = img
 
         # Read ground truth
-        with open(gt_path, 'r') as file:
-            gt_file = file.read().replace('\n', '')
-            transcriptions_list = [gt_file]
-            gt = transcriptions_list
+        with HiddenPrints():
+            gt = COCO(gt_path)
 
-        return cls(data, gt, image_color)
+        instance = cls(data, gt, image_color)
+        key = instance.gt.anns.keys()[0]
+        ann = instance.gt.anns[key]
+        category_id = ann['category_id']
+        cat_name = gt.cats[category_id]['name']
+        instance.bboxes.append(ann['bbox'] + [cat_name])
+
+        return instance
 
     def save_gt(self, gt, img_names):
         for i, img_name in enumerate(img_names):
@@ -93,21 +99,29 @@ class ClsfEvaluation(BaseEvaluation):
         }
         return metric
 
-    # def read_groundtruth(self):
-    #     with open(self.gt_path, 'r') as file:
-    #         gt_file = file.read().replace('\n', '')
-    #         self.transcriptions_list = [gt_file]
+    # def format_original_gt(self, *args, **kwargs):
+    #     gt = self.gt
+    #     return gt
 
-    def format_original_gt(self, *args, **kwargs):
-        gt = self.gt
-        return gt
+    def create_original_input(self):
+        if self.option in ['test_left_rotation', 'test_left_rotation']:
+            x, y, w, h, cat_ = self.bboxes[0]
+            data = [self.data[y:y + h, x:x + w]]
+            gt = [cat_]
+        else:
+            data = [self.data]
+            gt = self.gt
+        return data, gt
 
     def format_transformed_gt(self, *args, **kwargs):
         if 'data' in kwargs:
             num_record = len(kwargs['data'])
         else:
             num_record = 1
-        gt = self.gt * num_record
+        if self.option in ['test_left_rotation', 'test_left_rotation']:
+            gt = self.bboxes[0][-1:] * num_record
+        else:
+            gt = self.gt * num_record
         return gt
 
     def format_dt(self, *args, **kwargs):

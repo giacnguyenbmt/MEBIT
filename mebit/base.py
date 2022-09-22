@@ -76,7 +76,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         }
 
     def _init_store_option_data(self, init_value=0, init_score=0):
-        _data = {
+        option_data = {
             'penultimate': {
                 'data': None,
                 'gt': None,
@@ -92,7 +92,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'value': init_value
             },
         }
-        return _data
+        return option_data
     
     #======================================================
     #==============split transformation test===============
@@ -271,8 +271,85 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the crop test!")
                 self.stop_generator = True
     
-    def test_rotate90(self):
+    def test_90_rotation(self):
         ...
+
+    def test_left_rotation(self):
+        rotation_limit = 0
+        while True:
+            transformed = trans.rotate(
+                limit=rotation_limit,
+                image=self.data,
+                masks=self.masks,
+                keypoints=self.keypoints,
+                bboxes=self.bboxes
+            )
+            
+            raw_data = transformed['image']
+            x, y, w, h, _ = transformed['bboxes'][0]
+            data = [raw_data[y:y + h, x:x + w]]
+
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = rotation_limit
+            rotation_limit += 1
+
+            yield data, raw_gt
+
+            if rotation_limit >= 45:
+                print("Reached the limit of the left rotation test!")
+                self.stop_generator = True
+    
+    def test_right_rotation(self):
+        rotation_limit = 0
+        while True:
+            transformed = trans.rotate(
+                limit=rotation_limit,
+                image=self.data,
+                masks=self.masks,
+                keypoints=self.keypoints,
+                bboxes=self.bboxes
+            )
+            
+            raw_data = transformed['image']
+            x, y, w, h, _ = transformed['bboxes'][0]
+            data = [raw_data[y:y + h, x:x + w]]
+
+            del transformed['image']
+            raw_gt = [transformed]
+
+            self.limit = rotation_limit
+            rotation_limit -= 1
+
+            yield data, raw_gt
+
+            if rotation_limit >= 45:
+                print("Reached the limit of the right rotation test!")
+                self.stop_generator = True
+
+    def test_compactness(self):
+        compacness_limit = 1.0
+        raw_data = self.data
+        x, y, w, h, cat_ = self.bboxes[0]
+        while True:
+            alpha = np.sqrt(1 / compacness_limit)
+            new_w = round(w * alpha)
+            new_h = round(h * alpha)
+            new_x = x - round((new_w - w) / 2)
+            new_y = y - round((new_h - h) / 2)
+            data = [raw_data[new_y:new_y + new_h, new_x:new_x + new_w]]
+
+            self.limit = compacness_limit
+            compacness_limit = round(compacness_limit - 0.05, 2)
+
+            raw_gt = cat_
+
+            yield data, raw_gt
+
+            if compacness_limit <= 0.05:
+                print("Reached the limit of the compactness test!")
+                self.stop_generator = True
 
     #======================================================
     #==================Log and report======================
@@ -351,12 +428,12 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.save_dt(dt, img_names)
 
     def update_report(self, option):
-        self.report[option]['storage']['value'] = self.limit
+        self.report[option]['storage']['last']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
         _mess = self.report[option]['message']
         _note = self.report[option]['note']
-        _value = self.report[option]['storage']['value']
+        _value = self.report[option]['storage']['last']['value']
         message = "{}: \n{} = {} \n({})".format(option,
                                                 _mess,
                                                 _value,
@@ -405,27 +482,22 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 os.makedirs(os.path.join(self.result_image_path, 'dt'))
 
         self.height, self.width, _ = self.data.shape
-
-        # Read ground truth
-        # self.read_groundtruth()
-        
-    # @abc.abstractmethod
-    # def read_groundtruth(self):
-    #     ...
     
     def get_generator(self, option):
         return self.report.get(option).get('generator')
     
+    @abc.abstractmethod
     def create_original_input(self):
-        data = [self.data]
+        # format dt
+        data = self.data
         # format gt
-        gt = self.format_original_gt()
+        gt = self.gt
         return data, gt
 
-    @abc.abstractmethod
-    def format_original_gt(self, *args, **kwargs):
-        gt = None
-        return gt
+    # @abc.abstractmethod
+    # def format_original_gt(self, *args, **kwargs):
+    #     gt = None
+    #     return gt
 
     def create_input(self, image_generator):
         """

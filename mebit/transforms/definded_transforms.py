@@ -122,3 +122,43 @@ def flip_rorate90(rotate_k=1, flip=False, *args, **kwargs):
     )
     transformed = transform(**data)
     return transformed
+
+def rotate(limit=90, 
+           interpolation=1, 
+           border_mode=4, 
+           value=None, 
+           mask_value=None, 
+           method='largest_box', 
+           crop_border=False, 
+           always_apply=True, 
+           p=1.0, 
+           *args, 
+           **kwargs):
+    data = {
+        'image': None,
+        'masks': None,
+        'keypoints': None,
+        'bboxes': None
+    }
+    for key in data.keys():
+        if key in kwargs:
+            data[key] = kwargs[key]
+
+    transform = A.Compose(
+        [A.Rotate(
+            limit=[limit, limit], 
+            interpolation=interpolation, 
+            border_mode=border_mode, 
+            value=value, 
+            mask_value=mask_value, 
+            method=method, 
+            crop_border=crop_border, 
+            always_apply=always_apply, 
+            p=p
+        )], 
+        keypoint_params=A.KeypointParams(format='xy', 
+                                            remove_invisible=False),
+        bbox_params=A.BboxParams(format='coco')
+    )
+    transformed = transform(**data)
+    return transformed
