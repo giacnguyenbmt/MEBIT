@@ -1,3 +1,4 @@
+from genericpath import isdir
 import os
 import abc
 import random
@@ -445,6 +446,30 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 img_names.append(_new_name)
         return img_names
 
+    def save_test_image(self, img):
+        if self.save_all_test_images is False:
+            return None
+
+        if self.result_image_path is not None:
+            dir_ = os.path.join(
+                self.result_image_path, 
+                'test_images'
+            )
+        else:
+            dir_ = 'test_images'
+        
+        if os.path.isdir(dir_) is False:
+            os.makedirs(dir_)
+        
+        _name = os.path.join(
+            dir_,
+            "{}.jpg".format(self.counter)
+        )
+        self.save_image(_name, img)
+        self.counter += 1
+
+        return True
+
     @abc.abstractmethod
     def save_gt(self, gt, img_names):
         ...
@@ -563,16 +588,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # get result from model
         results = []
         for _, img in enumerate(data):
-            # save image before inference
-            if self.result_image_path is not None:
-                _name = os.path.join(
-                    self.result_image_path,
-                    "{}.jpg".format(self.counter)
-                )
-            else:
-                _name = "{}.jpg".format(self.counter)
-            self.save_image(_name, img)
-            self.counter += 1
+            # save test image if necessary
+            if self.save_all_test_images:
+                self.save_test_image(img)
 
             predicted_result = inference_function(img)
             converted_result = convert_output_function(predicted_result)
@@ -638,6 +656,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
               criterion="precision",
               threshold=0.5,
               result_image_path=None,
+              save_all_test_images=False,
               verbose=False):
         """
         Parameter:
@@ -649,6 +668,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         self.option = option
         self.result_image_path = result_image_path
+        self.save_all_test_images = save_all_test_images
 
         self.test_transformation(
             inference_function,

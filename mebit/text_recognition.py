@@ -7,12 +7,12 @@ from .utils import util
 
 class TRecogEvaluation(BaseEvaluation):
     valid_option_list = [
-        "blurring", 
-        "increasing_brightness", 
-        "increasing_contrast", 
-        "decreasing_brightness", 
-        "decreasing_contrast", 
-        "down_scale", 
+        "blurring",
+        "increasing_brightness",
+        "increasing_contrast",
+        "decreasing_brightness",
+        "decreasing_contrast",
+        "down_scale",
         "crop",
         "left_rotation",
         "right_rotation",

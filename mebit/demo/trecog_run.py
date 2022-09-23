@@ -47,4 +47,6 @@ for i in range(len(option)):
               option[i],
               'accuracy',
               0.5,
+              "result_folder",
+              save_all_test_images=True,
               verbose=True)
