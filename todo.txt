@@ -16,3 +16,5 @@ check logging: text det, text recog
 new rotate
 
 format code
+
+format data structure
