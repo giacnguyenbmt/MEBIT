@@ -14,9 +14,9 @@ class TRecogEvaluation(BaseEvaluation):
         "decreasing_contrast",
         "down_scale",
         "crop",
-        "left_rotation",
-        "right_rotation",
-        "compactness",
+        # "left_rotation", # To-do option
+        # "right_rotation",
+        # "compactness",
     ]
 
     @classmethod
@@ -53,6 +53,9 @@ class TRecogEvaluation(BaseEvaluation):
 
         return instance
 
+    """
+    # This func is used in order to read input for 
+    # left/right rotation and compactness option
     @classmethod
     def from_extended_input_path(cls, 
                                  img_path, 
@@ -69,6 +72,7 @@ class TRecogEvaluation(BaseEvaluation):
         instance.gt_path = gt_path
 
         return instance
+    """
 
     def save_gt(self, gt, img_names):
         for i, img_name in enumerate(img_names):

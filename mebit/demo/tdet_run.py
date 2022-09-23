@@ -1,13 +1,15 @@
+import os
+
 from mmocr.utils.ocr import MMOCR
 import cv2
 
-from ..__process import Evaluation
-
+from ..text_detection import TDetEvaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
-    cv2.imwrite('demo/my_image.jpg', img)
-    predicted_sample = ocr.readtext('demo/my_image.jpg', output='demo/det_out.jpg')
+    cv2.imwrite(temp_img_path, img)
+    
+    predicted_sample = ocr.readtext(temp_img_path, output='demo/det_out.jpg')
     return predicted_sample
 
 def convert_output_function(predicted_sample):
@@ -18,10 +20,13 @@ def convert_output_function(predicted_sample):
                        'confidences': predicted_confidence}
     return formated_sample
 
-img = 'MEBIT/data/img_16.jpg'
-gt = 'MEBIT/data/gt_img_16.txt'
-# img = 'data/img_16.jpg'
-# gt = 'data/gt_img_16.txt'
+img = 'MEBIT/data/text_detection/img_16.jpg'
+gt = 'MEBIT/data/text_detection/gt_img_16.txt'
+
+save_dir_ = 'demo'
+temp_img_path = os.path.join(save_dir_, 'my_image.jpg')
+if os.path.isdir(save_dir_) is False:
+    os.makedirs(save_dir_)
 
 option = ["blurring", 
           "increasing_brightness", 
@@ -34,7 +39,7 @@ option = ["blurring",
 # Load models into memory
 ocr = MMOCR(recog=None)
 
-foo = Evaluation(img, gt)
+foo = TDetEvaluation(img, gt)
 # foo.tdet_stats(inference_function, 
 #                convert_output_function, 
 #                option[6],

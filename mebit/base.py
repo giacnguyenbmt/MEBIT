@@ -13,7 +13,9 @@ from .transforms import definded_transforms as trans
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
 class BaseEvaluation(metaclass=abc.ABCMeta):
+    # count number of images which model fits
     counter = 0
+    
     length_of_random_name = 5
     img_path = None
     gt_path = None
@@ -110,6 +112,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'type': 3
             }
         }
+
+    def get_available_option(self):
+        return self.valid_option_list
 
     def _init_store_option_data(self, init_value=0, init_score=0):
         option_data = {
@@ -597,7 +602,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             results.append(converted_result)
 
         # format predicted result
-        dt = self.format_dt(results=results)
+        dt = self.format_dt(results=results, gt=gt)
 
         return dt
 
