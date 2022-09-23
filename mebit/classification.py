@@ -41,7 +41,12 @@ class ClsfEvaluation(BaseEvaluation):
             transcriptions_list = [gt_file]
             gt = transcriptions_list
 
-        return cls(data, gt, image_color)
+        instance = cls(data, gt, image_color)
+
+        instance.img_path = img_path
+        instance.gt_path = gt_path
+
+        return instance
 
     @classmethod
     def from_coco_input_path(cls, 
@@ -66,6 +71,10 @@ class ClsfEvaluation(BaseEvaluation):
         category_id = ann['category_id']
         cat_name = gt.cats[category_id]['name']
         instance.bboxes.append(ann['bbox'] + [cat_name])
+
+
+        instance.img_path = img_path
+        instance.gt_path = gt_path
 
         return instance
 
@@ -103,7 +112,7 @@ class ClsfEvaluation(BaseEvaluation):
         return metric
 
     def create_original_input(self):
-        if self.option in ['left_rotation', 'left_rotation']:
+        if self.option in ['left_rotation', 'right_rotation', 'compactness']:
             x, y, w, h, cat_ = self.bboxes[0]
             x, y, w, h = map(int, [x, y, w, h])
             data = [self.data[y:y + h, x:x + w]]
@@ -118,7 +127,7 @@ class ClsfEvaluation(BaseEvaluation):
             num_record = len(kwargs['data'])
         else:
             num_record = 1
-        if self.option in ['left_rotation', 'left_rotation']:
+        if self.option in ['left_rotation', 'right_rotation', 'compactness']:
             gt = self.bboxes[0][-1:] * num_record
         else:
             gt = self.gt * num_record

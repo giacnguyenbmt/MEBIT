@@ -1,5 +1,7 @@
 import os
 import abc
+import random
+import string
 
 import cv2
 import numpy as np
@@ -10,6 +12,10 @@ from .transforms import definded_transforms as trans
 read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 
 class BaseEvaluation(metaclass=abc.ABCMeta):
+    counter = 0
+    length_of_random_name = 5
+    img_path = None
+    gt_path = None
     keypoints = []
     masks = []
     bboxes = []
@@ -292,7 +298,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     def test_90_rotation(self):
         ...
 
-    def test_left_rotation(self):
+    def test_left_rotation(self, color=None):
         rotation_limit = 0
         while True:
             transformed = trans.rotate(
@@ -344,7 +350,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            if rotation_limit >= 45:
+            if rotation_limit <= -45:
                 print("Reached the limit of the right rotation test!")
                 self.stop_generator = True
 
@@ -389,8 +395,15 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # store name of saved images
         img_names = []
 
-        file_name = os.path.split(self.img_path)[-1]
-        _name, _extension = os.path.splitext(file_name)
+        if self.img_path is not None:
+            file_name = os.path.split(self.img_path)[-1]
+            _name, _extension = os.path.splitext(file_name)
+        else:
+            _name = ''.join(random.choices(
+                string.ascii_uppercase + string.digits, 
+                k=self.length_of_random_name
+            ))
+            _extension = '.jpg'
 
         if len(data) == 1:
             _new_name = _name \
@@ -480,8 +493,13 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             return False
         self.test_failed = False
 
+        # if self.counter > 5:
+        #     self.stop_generator = True
+        #     self.test_failed = True
+
         if self.stop_generator is True:
             return False
+
 
         return True
 
@@ -534,6 +552,17 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # get result from model
         results = []
         for _, img in enumerate(data):
+            # save image before inference
+            if self.result_image_path is not None:
+                _name = os.path.join(
+                    self.result_image_path,
+                    "{}.jpg".format(self.counter)
+                )
+            else:
+                _name = "{}.jpg".format(self.counter)
+            self.save_image(_name, img)
+            self.counter += 1
+
             predicted_result = inference_function(img)
             converted_result = convert_output_function(predicted_result)
             results.append(converted_result)
@@ -565,6 +594,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # Conduct inference and format model result
         dt = self.fit(inference_function, convert_output_function, data, gt)
 
+        print(gt, dt)
         metric = self.evaluate(gt, dt)
 
         # STEP 3: RUN TEST WITH CORRESPONDING OPTION
@@ -581,10 +611,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 # Conduct inference and format model result
                 dt = self.fit(inference_function, convert_output_function, data, gt)
 
-                print('==============')
-                print(gt, dt)
                 metric = self.evaluate(gt, dt)
-                print(metric)
 
                 # Check end condition
                 if self.check(metric, threshold, criterion) is False:
