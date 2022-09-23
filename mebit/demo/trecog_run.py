@@ -5,7 +5,7 @@ from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 import cv2
 
-from ..__process import Evaluation
+from ..text_recognition import TRecogEvaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
@@ -39,12 +39,12 @@ config['predictor']['beamsearch']=False
 
 detector = Predictor(config)
 
-foo = Evaluation(img, gt)
+foo = TRecogEvaluation.from_input_path(img, gt)
 
 for i in range(len(option)):
-    foo.trecog_stats(inference_function, 
-                    convert_output_function, 
-                    option[i],
-                    'accuracy',
-                    0.5,
-                    verbose=True)
+    foo.stats(inference_function,
+              convert_output_function,
+              option[i],
+              'accuracy',
+              0.5,
+              verbose=True)

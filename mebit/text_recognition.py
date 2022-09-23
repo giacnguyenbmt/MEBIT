@@ -5,7 +5,7 @@ from .base import BaseEvaluation
 from .metrics import trecog_metric as text_metric
 from .utils import util
 
-class ClsfEvaluation(BaseEvaluation):
+class TRecogEvaluation(BaseEvaluation):
     valid_option_list = [
         "blurring", 
         "increasing_brightness", 
