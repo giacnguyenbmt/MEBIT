@@ -17,4 +17,9 @@ new rotate
 
 format code
 
-format data structure
+===========================================
+format data structure. Image "data" folder
+Add color option to left/right rotation
+Naming image when there is not input_path
+Add hard compactness test following Mr.Tung instruction
+Add contrast_limit-type option
