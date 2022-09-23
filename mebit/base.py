@@ -605,7 +605,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # Conduct inference and format model result
         dt = self.fit(inference_function, convert_output_function, data, gt)
 
-        print(gt, dt)
         metric = self.evaluate(gt, dt)
 
         # STEP 3: RUN TEST WITH CORRESPONDING OPTION
