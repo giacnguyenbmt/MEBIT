@@ -1,12 +1,12 @@
 import os
 
-import cv2
 from pycocotools.coco import COCO
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.metrics import precision_score, recall_score
 
 from .base import BaseEvaluation
 from .utils.util import HiddenPrints
+from .utils import util
 
 class ClsfEvaluation(BaseEvaluation):
     valid_option_list = [
@@ -28,12 +28,7 @@ class ClsfEvaluation(BaseEvaluation):
                         gt_path, 
                         image_color='rgb'):
         # Read image
-        BGR_img = cv2.imread(img_path)
-        if image_color == 'rgb':
-            img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
-        elif image_color == 'bgr':
-            img = BGR_img
-        data = img
+        data = util.read_image(img_path, image_color)
 
         # Read ground truth
         with open(gt_path, 'r') as file:
@@ -54,12 +49,7 @@ class ClsfEvaluation(BaseEvaluation):
                              gt_path, 
                              image_color='rgb'):
         # Read image
-        BGR_img = cv2.imread(img_path)
-        if image_color == 'rgb':
-            img = cv2.cvtColor(BGR_img, cv2.COLOR_BGR2RGB)
-        elif image_color == 'bgr':
-            img = BGR_img
-        data = img
+        data = util.read_image(img_path, image_color)
 
         # Read ground truth
         with HiddenPrints():

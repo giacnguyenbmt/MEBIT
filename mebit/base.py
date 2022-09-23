@@ -35,67 +35,78 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'message': 'blur_limit',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_blurring()
+                'generator': self.test_blurring(),
+                'type': 1
             },
             "increasing_brightness": {
                 'message': 'brightness_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
-                'generator': self.test_increasing_brightness()
+                'generator': self.test_increasing_brightness(),
+                'type': 1
             },
             "increasing_contrast": {
                 'message': 'contrast_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
-                'generator': self.test_increasing_contrast()
+                'generator': self.test_increasing_contrast(),
+                'type': 1
             },
             "decreasing_brightness": {
                 'message': 'brightness_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
-                'generator': self.test_decreasing_brightness()
+                'generator': self.test_decreasing_brightness(),
+                'type': 1
             },
             "decreasing_contrast": {
                 'message': 'contrast_limit',
                 'storage': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
-                'generator': self.test_decreasing_contrast()
+                'generator': self.test_decreasing_contrast(),
+                'type': 1
             },
             "down_scale": {
                 'message': 'max_ratio',
                 'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
-                'generator': self.test_scale()
+                'generator': self.test_scale(),
+                'type': 1
             },
             "crop": {
                 'message': 'alpha',
                 'storage': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
-                'generator': self.test_crop()
+                'generator': self.test_crop(),
+                'type': 2
             },
             "rotate90": {
                 'message': 'num_image',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_90_rotation()
+                'generator': self.test_90_rotation(),
+                'type': 1
             },
             "left_rotation": {
                 'message': 'rotation_limit',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_left_rotation()
+                'generator': self.test_left_rotation(),
+                'type': 3
             },
             "right_rotation": {
                 'message': 'rotation_limit',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'lower is better',
-                'generator': self.test_right_rotation()
+                'generator': self.test_right_rotation(),
+                'type': 3
             },
             "compactness": {
                 'message': 'compacness_limit',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'lower is better',
-                'generator': self.test_compactness()
+                'generator': self.test_compactness(),
+                'type': 3
             }
         }
 
