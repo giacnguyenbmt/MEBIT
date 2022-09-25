@@ -451,17 +451,17 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 img_names.append(_new_name)
         return img_names
 
-    def save_test_image(self, img):
-        if self.save_all_test_images is False:
+    def save_tested_image(self, img):
+        if self.save_all_tested_images is False:
             return None
 
         if self.result_image_path is not None:
             dir_ = os.path.join(
                 self.result_image_path, 
-                'test_images'
+                'tested_images'
             )
         else:
-            dir_ = 'test_images'
+            dir_ = 'tested_images'
         
         if os.path.isdir(dir_) is False:
             os.makedirs(dir_)
@@ -594,8 +594,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         results = []
         for _, img in enumerate(data):
             # save test image if necessary
-            if self.save_all_test_images:
-                self.save_test_image(img)
+            if self.save_all_tested_images:
+                self.save_tested_image(img)
 
             predicted_result = inference_function(img)
             converted_result = convert_output_function(predicted_result)
@@ -661,7 +661,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
               criterion="precision",
               threshold=0.5,
               result_image_path=None,
-              save_all_test_images=False,
+              save_all_tested_images=False,
               verbose=False):
         """
         Parameter:
@@ -673,7 +673,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         self.option = option
         self.result_image_path = result_image_path
-        self.save_all_test_images = save_all_test_images
+        self.save_all_tested_images = save_all_tested_images
 
         self.test_transformation(
             inference_function,

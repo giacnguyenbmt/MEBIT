@@ -32,12 +32,12 @@ def text_infos_to_coco_dict(img_path, gt, width, height):
         }
     ]
 
-    points_list = gt['points_list']
-    transcriptions_list = gt['transcriptions_list']
+    boxes = gt['boxes']
+    texts = gt['texts']
     anns = []
     id = 1
-    for index, polygon in enumerate(points_list): 
-        if transcriptions_list[index] != '###':
+    for index, polygon in enumerate(boxes): 
+        if texts[index] != '###':
             ann = {
                 "id": id, 
                 "image_id": 1, 

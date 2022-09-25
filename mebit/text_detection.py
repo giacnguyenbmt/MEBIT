@@ -220,15 +220,16 @@ class TDetEvaluation(BaseEvaluation):
 
     def create_original_input(self):
         data = [self.data]
+
         # if option is crop, convert bbox annotation to mask annotation
         if self.report[self.option]['type'] == 2:
-            coco_format = self.text_infos_to_coco_dict(
+            coco_format = coco_util.text_infos_to_coco_dict(
                 self.img_path,
                 self.gt,
                 self.width,
                 self.height
             )
-            gt = self.create_cocogt(coco_format)
+            gt = coco_util.create_cocogt(coco_format)
             # create masks from corresponding polygons
             for id in gt.getAnnIds(imgIds=1):
                 self.masks.append(gt.annToMask(gt.loadAnns(id)[0]))
@@ -240,7 +241,7 @@ class TDetEvaluation(BaseEvaluation):
     def format_transformed_gt(self, *args, **kwargs):
         raw_gt = args[0]
         data = kwargs.get('data', None)
-        assert (data is None), "Missing data argument"
+        assert (data is not None), "Missing data argument"
 
         if self.option == 'crop':
             coco_format = coco_util.albu_to_coco_dict(data, raw_gt)
@@ -269,7 +270,7 @@ class TDetEvaluation(BaseEvaluation):
     def format_dt(self, *args, **kwargs):
         results = kwargs.get('results', None)
         gt = kwargs.get('gt', None)
-        assert (None in [results, gt]), "Lack arguments"
+        assert (None not in [results, gt]), "Lack arguments"
 
         # if option is crop
         if self.report[self.option]['type'] == 2:

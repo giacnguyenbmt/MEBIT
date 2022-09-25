@@ -39,16 +39,19 @@ option = ["blurring",
 # Load models into memory
 ocr = MMOCR(recog=None)
 
-foo = TDetEvaluation(img, gt)
-# foo.tdet_stats(inference_function, 
-#                convert_output_function, 
-#                option[6],
-#                'ap',
-#                0.5,
-#                verbose=True)
-foo.tdet_stats(inference_function, 
-               convert_output_function, 
-               option[0],
-               'precision',
-               0.5,
-               verbose=True)
+foo = TDetEvaluation.from_input_path(img, gt)
+# foo.stats(inference_function, 
+#           convert_output_function, 
+#           option[6],
+#           'ap',
+#           0.5,
+#           verbose=True)
+for i in range(6):
+    foo.stats(inference_function, 
+            convert_output_function, 
+            option[i],
+            'precision',
+            0.5,
+            'result_folder',
+            True,
+            verbose=True)
