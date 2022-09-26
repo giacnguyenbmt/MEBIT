@@ -683,19 +683,20 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         metric = self.evaluate(gt, dt)
 
         # STEP 3: RUN TEST WITH CORRESPONDING OPTION
-        # if model fails in evaluation of origin image, stop testing
+        # if model fails in evaluation of the original image, stop testing
         if self.check(metric, threshold, criterion):
-            # Get corresponding generator
+            # Get the corresponding generator
             image_generator = self.get_generator(option)
 
+            # if the option is belong to the group determining the deadpoint
             if self.report[self.option]['type'] != 4:
                 while True:
                     self.backup_data(data, gt, dt)
 
-                    # Create data which has format corresponding option
+                    # Create data which has format the corresponding option
                     data, gt = self.create_input(image_generator)
                     
-                    # Conduct inference and format model result
+                    # Conduct inference and format model results
                     dt = self.fit(
                         inference_function, 
                         convert_output_function, 
@@ -714,10 +715,10 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             # if the option is belong to the group counting failed images
             elif self.report[self.option]['type'] == 4:
                 while True:
-                    # Create data which has format corresponding option
+                    # Create data which has format the corresponding option
                     data, gt = self.create_input(image_generator)
                     
-                    # Conduct inference and format model result
+                    # Conduct inference and format model results
                     dt = self.fit(
                         inference_function,
                         convert_output_function,
