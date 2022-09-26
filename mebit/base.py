@@ -113,8 +113,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             }
         }
 
-    def get_available_option(self):
-        return self.valid_option_list
+    @classmethod
+    def get_available_option(cls):
+        return cls.valid_option_list
 
     def _init_store_option_data(self, init_value=0, init_score=0):
         option_data = {
