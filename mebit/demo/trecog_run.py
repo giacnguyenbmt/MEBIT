@@ -21,15 +21,16 @@ def convert_output_function(predicted_sample):
     # print(predicted_sample)
     return predicted_sample
 
-img = 'data/word_1.png'
-gt = 'data/treg_gt.txt'
+img = 'data/text_recognition/word_1.png'
+gt = 'data/text_recognition/treg_gt.txt'
 option = ["blurring",
           "increasing_brightness",
           "increasing_contrast",
           "decreasing_brightness",
           "decreasing_contrast",
           "down_scale",
-          "crop"]
+          "crop",
+          "rotate90",]
 
 config = Cfg.load_config_from_name('vgg_transformer')
 config['weights'] = 'https://drive.google.com/uc?id=13327Y1tz1ohsm5YZMyXVMPIOjoOA0OaA'

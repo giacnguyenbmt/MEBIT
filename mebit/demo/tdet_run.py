@@ -34,7 +34,8 @@ option = ["blurring",
           "decreasing_brightness", 
           "decreasing_contrast", 
           "down_scale",
-          "crop"]
+          "crop"
+          "rotate90",]
 
 # Load models into memory
 ocr = MMOCR(recog=None)
