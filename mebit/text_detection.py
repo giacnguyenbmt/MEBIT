@@ -21,6 +21,7 @@ class TDetEvaluation(BaseEvaluation):
         "decreasing_contrast",
         "down_scale",
         "crop",
+        "rotate90",
         # "left_rotation", # To-do option
         # "right_rotation",
         # "compactness",
@@ -247,7 +248,8 @@ class TDetEvaluation(BaseEvaluation):
             coco_format = coco_util.albu_to_coco_dict(data, raw_gt)
             gt = coco_util.create_cocogt(coco_format)
 
-        elif self.option == "down_scale":
+        elif (self.option == "down_scale" 
+        or self.report[self.option]['type'] == 4):
             keypoints = raw_gt[0]['keypoints']
             new_points_list = [[keypoints[i][0], 
                                 keypoints[i][1],
@@ -262,6 +264,7 @@ class TDetEvaluation(BaseEvaluation):
                 'boxes': new_points_list,
                 'texts': self.gt['texts']
             }
+
         else:
             gt = self.gt
 

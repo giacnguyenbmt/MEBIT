@@ -87,8 +87,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 'message': 'num_image',
                 'storage': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
-                'generator': self.test_90_rotation(),
-                'type': 1
+                'generator': self.test_rotate_90(),
+                'type': 4
             },
             "left_rotation": {
                 'message': 'rotation_limit',
@@ -137,7 +137,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     
     #======================================================
     #==============split transformation test===============
-    def test_blurring(self):
+    def test_blurring(self, *args, **kwargs):
         blur_limit = 3
         while True:
             transformed = trans.blur(
@@ -156,7 +156,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the blurring test!")
                 self.stop_generator = True
 
-    def test_increasing_brightness(self):
+    def test_increasing_brightness(self, *args, **kwargs):
         brightness_limit = 0
         while True:
             transformed = trans.brightness(
@@ -175,7 +175,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the brightness test!")
                 self.stop_generator = True
 
-    def test_increasing_contrast(self):
+    def test_increasing_contrast(self, *args, **kwargs):
         contrast_limit = 0
         amout = 0.1
         while True:
@@ -197,7 +197,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
-    def test_decreasing_brightness(self):
+    def test_decreasing_brightness(self, *args, **kwargs):
         brightness_limit = 0
         while True:
             transformed = trans.brightness(
@@ -216,7 +216,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the brightness test!")
                 self.stop_generator = True
 
-    def test_decreasing_contrast(self):
+    def test_decreasing_contrast(self, *args, **kwargs):
         contrast_limit = 0
         amout = 0.1
         while True:
@@ -238,7 +238,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
-    def test_scale(self):
+    def test_scale(self, *args, **kwargs):
         ratio = 0.9
         while True:
             transformed = trans.resize(
@@ -261,7 +261,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the down-scale test!")
                 self.stop_generator = True
 
-    def test_crop(self):
+    def test_crop(self, *args, **kwargs):
         # crop 9 parts of image according alpha
         numerator = 5
         denominator = 6
@@ -312,10 +312,46 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the crop test!")
                 self.stop_generator = True
     
-    def test_90_rotation(self):
-        ...
+    def test_rotate_90(self, flip=False, *args, **kwargs):
+        while True:
+            data = []
+            raw_gt = []
+            
+            if flip is True:
+                for k in range(0, 4):
+                    transformed = trans.flip_rorate90(
+                        k=k, 
+                        flip=True, 
+                        image=self.data,
+                        masks=self.masks,
+                        keypoints=self.keypoints,
+                        bboxes=self.bboxes
+                    )
+                    data.append(transformed['image'])
+                    del transformed['image']
+                    raw_gt.append(transformed)
 
-    def test_left_rotation(self, color=None):
+                    yield data, raw_gt
+
+            for k in range(1, 4):
+                transformed = trans.flip_rorate90(
+                    k=k, 
+                    flip=False, 
+                    image=self.data,
+                    masks=self.masks,
+                    keypoints=self.keypoints,
+                    bboxes=self.bboxes
+                )
+                data.append(transformed['image'])
+                del transformed['image']
+                raw_gt.append(transformed)
+                
+                # stop condition
+                self.stop_type_4 = (k == 3)
+
+                yield data, raw_gt
+
+    def test_left_rotation(self, color=None, *args, **kwargs):
         rotation_limit = 0
         while True:
             transformed = trans.rotate(
@@ -343,7 +379,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the left rotation test!")
                 self.stop_generator = True
     
-    def test_right_rotation(self):
+    def test_right_rotation(self, *args, **kwargs):
         rotation_limit = 0
         while True:
             transformed = trans.rotate(
@@ -371,7 +407,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the right rotation test!")
                 self.stop_generator = True
 
-    def test_compactness(self):
+    def test_compactness(self, *args, **kwargs):
         compacness_limit = 1.0
         raw_data = self.data
         x, y, w, h, cat_ = self.bboxes[0]
@@ -487,22 +523,32 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         if (self.result_image_path is None 
             or self.test_failed is False):
             return
+        
+        if self.report[self.option]['type'] == 4:
+            suffix = self.report[self.option]['storage']['last']['value']
+            img_names = self.save_images(data, type_data=str(suffix))
+            self.save_gt(gt, img_names)
+            self.save_dt(dt, img_names)
 
-        # last point
-        img_names = self.save_images(
-            self.penultimate_data, 
-            type_data='lastpoint'
-        )
-        self.save_gt(self.penultimate_gt, img_names)
-        self.save_dt(self.penultimate_dt, img_names)
+        else:
+            # last point
+            img_names = self.save_images(
+                self.penultimate_data, 
+                type_data='lastpoint'
+            )
+            self.save_gt(self.penultimate_gt, img_names)
+            self.save_dt(self.penultimate_dt, img_names)
 
-        # dead point
-        img_names = self.save_images(data, type_data='deadpoint')
-        self.save_gt(gt, img_names)
-        self.save_dt(dt, img_names)
+            # dead point
+            img_names = self.save_images(data, type_data='deadpoint')
+            self.save_gt(gt, img_names)
+            self.save_dt(dt, img_names)
 
     def update_report(self, option):
-        self.report[option]['storage']['last']['value'] = self.limit
+        if  self.report[option]['type'] == 4:
+            self.report[option]['storage']['last']['value'] += 1
+        else:
+            self.report[option]['storage']['last']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
         _mess = self.report[option]['message']
@@ -549,6 +595,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     def preprocess_input(self):
         # set param
         self.stop_generator = False
+        self.stop_type_4 = False
 
         # check option
         assert (self.option in self.valid_option_list), 'Invalid option'
@@ -626,31 +673,68 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         data, gt  = self.create_original_input()
 
         # Conduct inference and format model result
-        dt = self.fit(inference_function, convert_output_function, data, gt)
+        dt = self.fit(
+            inference_function, 
+            convert_output_function, 
+            data, 
+            gt
+        )
 
         metric = self.evaluate(gt, dt)
 
         # STEP 3: RUN TEST WITH CORRESPONDING OPTION
+        # if model fails in evaluation of origin image, stop testing
         if self.check(metric, threshold, criterion):
             # Get corresponding generator
             image_generator = self.get_generator(option)
 
-            while True:
-                self.backup_data(data, gt, dt)
+            if self.report[self.option]['type'] != 4:
+                while True:
+                    self.backup_data(data, gt, dt)
 
-                # Create data which has format corresponding option
-                data, gt = self.create_input(image_generator)
-                
-                # Conduct inference and format model result
-                dt = self.fit(inference_function, convert_output_function, data, gt)
+                    # Create data which has format corresponding option
+                    data, gt = self.create_input(image_generator)
+                    
+                    # Conduct inference and format model result
+                    dt = self.fit(
+                        inference_function, 
+                        convert_output_function, 
+                        data, 
+                        gt
+                    )
 
-                metric = self.evaluate(gt, dt)
+                    metric = self.evaluate(gt, dt)
 
-                # Check end condition
-                if self.check(metric, threshold, criterion) is False:
-                    self.update_report(option)
-                    self.log(data, gt, dt)
-                    break
+                    # Check end condition
+                    if self.check(metric, threshold, criterion) is False:
+                        self.update_report(option)
+                        self.log(data, gt, dt)
+                        break
+            
+            # if the option is belong to the group counting failed images
+            elif self.report[self.option]['type'] == 4:
+                while True:
+                    # Create data which has format corresponding option
+                    data, gt = self.create_input(image_generator)
+                    
+                    # Conduct inference and format model result
+                    dt = self.fit(
+                        inference_function,
+                        convert_output_function,
+                        data,
+                        gt
+                    )
+
+                    metric = self.evaluate(gt, dt)
+
+                    # logging if model fails
+                    if self.check(metric, threshold, criterion) is False:
+                        self.update_report(option)
+                        self.log(data, gt, dt)
+
+                    # Check end condition
+                    if self.stop_type_4 is True:
+                        break
 
     #======================================================
     #====================Main function=====================

@@ -14,6 +14,7 @@ class TRecogEvaluation(BaseEvaluation):
         "decreasing_contrast",
         "down_scale",
         "crop",
+        "rotate90",
         # "left_rotation", # To-do option
         # "right_rotation",
         # "compactness",
