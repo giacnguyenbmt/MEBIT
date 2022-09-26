@@ -46,6 +46,8 @@ foo = TDetEvaluation.from_input_path(img, gt)
 #           option[6],
 #           'ap',
 #           0.5,
+#           'result_folder',
+#           True,
 #           verbose=True)
 for i in range(6):
     foo.stats(inference_function, 

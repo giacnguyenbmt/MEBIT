@@ -321,31 +321,31 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             if flip is True:
                 for k in range(0, 4):
                     transformed = trans.flip_rorate90(
-                        k=k, 
+                        rotate_k=k, 
                         flip=True, 
                         image=self.data,
                         masks=self.masks,
                         keypoints=self.keypoints,
                         bboxes=self.bboxes
                     )
-                    data.append(transformed['image'])
+                    data = [transformed['image']]
                     del transformed['image']
-                    raw_gt.append(transformed)
+                    raw_gt = [transformed]
 
                     yield data, raw_gt
 
             for k in range(1, 4):
                 transformed = trans.flip_rorate90(
-                    k=k, 
+                    rotate_k=k, 
                     flip=False, 
                     image=self.data,
                     masks=self.masks,
                     keypoints=self.keypoints,
                     bboxes=self.bboxes
                 )
-                data.append(transformed['image'])
+                data = [transformed['image']]
                 del transformed['image']
-                raw_gt.append(transformed)
+                raw_gt = [transformed]
                 
                 # stop condition
                 self.stop_type_4 = (k == 3)
@@ -731,8 +731,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
                     # logging if model fails
                     if self.check(metric, threshold, criterion) is False:
-                        self.update_report(option)
                         self.log(data, gt, dt)
+                    else:
+                        self.update_report(option)
 
                     # Check end condition
                     if self.stop_type_4 is True:
