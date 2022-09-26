@@ -34,21 +34,14 @@ option = ["blurring",
           "decreasing_brightness", 
           "decreasing_contrast", 
           "down_scale",
-          "crop"
+          "crop",
           "rotate90",]
 
 # Load models into memory
 ocr = MMOCR(recog=None)
 
 foo = TDetEvaluation.from_input_path(img, gt)
-# foo.stats(inference_function, 
-#           convert_output_function, 
-#           option[6],
-#           'ap',
-#           0.5,
-#           'result_folder',
-#           True,
-#           verbose=True)
+
 for i in range(6):
     foo.stats(inference_function, 
             convert_output_function, 
@@ -58,3 +51,21 @@ for i in range(6):
             'result_folder',
             True,
             verbose=True)
+
+foo.stats(inference_function, 
+          convert_output_function, 
+          option[6],
+          'ap',
+          0.5,
+          'result_folder',
+          True,
+          verbose=True)
+
+foo.stats(inference_function, 
+          convert_output_function, 
+          option[7],
+          'precision',
+          0.5,
+          'result_folder',
+          True,
+          verbose=True)

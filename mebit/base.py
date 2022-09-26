@@ -489,6 +489,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         return img_names
 
     def save_tested_image(self, img):
+        self.counter += 1
         if self.save_all_tested_images is False:
             return None
 
@@ -508,7 +509,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             "{}.jpg".format(self.counter)
         )
         self.save_image(_name, img)
-        self.counter += 1
 
         return True
 
@@ -526,7 +526,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             return
         
         if self.report[self.option]['type'] == 4:
-            suffix = self.report[self.option]['storage']['last']['value']
+            suffix = self.counter
             img_names = self.save_images(data, type_data=str(suffix))
             self.save_gt(gt, img_names)
             self.save_dt(dt, img_names)
@@ -642,8 +642,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         results = []
         for _, img in enumerate(data):
             # save test image if necessary
-            if self.save_all_tested_images:
-                self.save_tested_image(img)
+            self.save_tested_image(img)
 
             predicted_result = inference_function(img)
             converted_result = convert_output_function(predicted_result)
