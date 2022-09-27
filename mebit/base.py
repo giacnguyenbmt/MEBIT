@@ -1,6 +1,6 @@
-from genericpath import isdir
 import os
 import abc
+import copy
 import random
 import string
 
@@ -106,7 +106,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             },
             "compactness": {
                 'message': 'compacness_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'storage': self._init_store_option_data(1.0, 0),
                 'note': 'lower is better',
                 'generator': self.test_compactness(),
                 'type': 3
@@ -552,9 +552,10 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             self.report[option]['storage']['last']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
-        _mess = self.report[option]['message']
-        _note = self.report[option]['note']
-        _value = self.report[option]['storage']['last']['value']
+        option_ = self.report[option]
+        _mess = option_['message']
+        _note = option_['note']
+        _value = option_['storage']['last']['value']
         message = "{}: \n{} = {} \n({})".format(option,
                                                 _mess,
                                                 _value,
@@ -562,8 +563,15 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         if verbose is True:
             print(message)
         
-        return None
-        # return self.report[option]
+        # return None
+        option
+        return_dict = {
+            "message": _mess,
+            "note": _note,
+            "value": _value
+        }
+
+        return return_dict
 
     #======================================================
     #===============Metrics and condition==================
