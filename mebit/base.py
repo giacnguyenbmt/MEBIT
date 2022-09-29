@@ -17,8 +17,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     counter = 0
     
     length_of_random_name = 5
-    img_path = None
-    gt_path = None
+    # img_path = None
+    # gt_path = None
     keypoints = []
     masks = []
     bboxes = []
@@ -29,6 +29,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                  data,
                  gt,
                  image_color='rgb') -> None:
+
         self.data = data
         self.gt = gt
         self.image_color = image_color
@@ -521,8 +522,16 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         ...
     
     def log(self, data, gt, dt, metric=None):
-        if (self.result_image_path is None 
-            or self.test_failed is False):
+        if self.result_image_path is None:
+            return
+
+        if (self.stop_generator is True
+            and self.test_failed is False):
+            img_names = self.save_images(data, type_data='limit')
+            self.save_gt(gt, img_names)
+            self.save_dt(dt, img_names)
+
+        if self.test_failed is False:
             return
         
         if self.report[self.option]['type'] == 4:
@@ -735,6 +744,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                     )
 
                     metric = self.evaluate(gt, dt)
+                    print(gt, dt)
+                    print(metric)
 
                     # logging if model fails
                     if self.check(metric, threshold, criterion) is False:
