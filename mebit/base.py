@@ -525,12 +525,15 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         if self.result_image_path is None:
             return
 
+        # log limit
         if (self.stop_generator is True
-            and self.test_failed is False):
+            and self.test_failed is False
+            and self.report[self.option]['type'] != 4):
             img_names = self.save_images(data, type_data='limit')
             self.save_gt(gt, img_names)
             self.save_dt(dt, img_names)
 
+        # log dead point
         if self.test_failed is False:
             return
         
@@ -598,13 +601,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             return False
         self.test_failed = False
 
-        # if self.counter > 5:
-        #     self.stop_generator = True
-        #     self.test_failed = True
-
         if self.stop_generator is True:
             return False
-
 
         return True
 
