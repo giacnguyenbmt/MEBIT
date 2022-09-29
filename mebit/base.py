@@ -1,11 +1,11 @@
 import os
 import abc
 import copy
-import random
-import string
 
 import cv2
 import numpy as np
+
+from mebit.utils import util
 
 from .metrics import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 from .transforms import definded_transforms as trans
@@ -15,10 +15,7 @@ read_gt = rrc_evaluation_funcs.get_tl_line_values_from_file_contents
 class BaseEvaluation(metaclass=abc.ABCMeta):
     # count number of images which model fits
     counter = 0
-    
-    length_of_random_name = 5
-    # img_path = None
-    # gt_path = None
+
     keypoints = []
     masks = []
     bboxes = []
@@ -34,6 +31,9 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.gt = gt
         self.image_color = image_color
         self.height, self.width, _ = self.data.shape
+        self.img_path = util.create_random_name()
+        self.gt_path = None
+
         self.report = {
             "blurring": {
                 'message': 'blur_limit',
@@ -450,15 +450,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # store name of saved images
         img_names = []
 
-        if self.img_path is not None:
-            file_name = os.path.split(self.img_path)[-1]
-            _name, _extension = os.path.splitext(file_name)
-        else:
-            _name = ''.join(random.choices(
-                string.ascii_uppercase + string.digits, 
-                k=self.length_of_random_name
-            ))
-            _extension = '.jpg'
+        file_name = os.path.split(self.img_path)[-1]
+        _name, _extension = os.path.splitext(file_name)
 
         if len(data) == 1:
             _new_name = _name \

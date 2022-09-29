@@ -1,5 +1,7 @@
 import os
 import sys
+import random
+import string
 
 import cv2
 
@@ -20,3 +22,11 @@ def read_image(img_path, image_color):
         img = BGR_img
 
     return img
+
+def create_random_name(length_of_random_name=5, img_ext='.jpg'):
+    _name = ''.join(random.choices(
+            string.ascii_uppercase + string.digits, 
+            k=length_of_random_name
+        ))
+    _extension = img_ext
+    return _name + _extension
