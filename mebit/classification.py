@@ -60,8 +60,7 @@ class ClsfEvaluation(BaseEvaluation):
         ann = instance.gt.anns[key]
         category_id = ann['category_id']
         cat_name = gt.cats[category_id]['name']
-        instance.bboxes.append(ann['bbox'] + [cat_name])
-
+        instance.bboxes = [ann['bbox'] + [cat_name]]
 
         instance.img_path = img_path
         instance.gt_path = gt_path
