@@ -97,7 +97,7 @@ class ODetEvaluation(BaseEvaluation):
             json_path
         )
 
-        json_content = json.dumps(dataset)
+        json_content = json.dumps(dataset, indent=4)
         with open(_path, 'w') as file:
             file.write(json_content)
     
@@ -122,7 +122,7 @@ class ODetEvaluation(BaseEvaluation):
         )
 
         dt_list = dt.dt_list
-        json_content = json.dumps(dt_list)
+        json_content = json.dumps(dt_list, indent=4)
         with open(_path, 'w') as file:
             file.write(json_content)
 
@@ -162,7 +162,7 @@ class ODetEvaluation(BaseEvaluation):
     # 
     def format_dt(self, *args, **kwargs):
         """
-        
+
         """
         results = kwargs.get('results', None)
         gt = kwargs.get('gt', None)
