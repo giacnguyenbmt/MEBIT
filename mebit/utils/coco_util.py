@@ -98,8 +98,10 @@ def albu_to_coco_dict(data, raw_gt):
     image_infos = {
         'images': [],
         'annotations': [],
-        'categories': set()
+        'categories': []
     }
+
+    categories_ = []
     
     ann_id = 1
     for img_id, img in enumerate(data):
@@ -125,9 +127,12 @@ def albu_to_coco_dict(data, raw_gt):
                 "iscrowd": 0,
             }
             image_infos['annotations'].append(ann)
-            image_infos['categories'].add(
-                {'id': cat_[0], 'name': cat_[1]}
-            )
+            if cat_[0] in categories_:
+                continue
+            else:
+                categories_.append(cat_[0])
+                cat_info = {'id': cat_[0], 'name': cat_[1]}
+                image_infos['categories'].append(cat_info)
             ann_id += 1
 
         for transformed_bbox in raw_gt[img_id]['bboxes']:
@@ -142,12 +147,14 @@ def albu_to_coco_dict(data, raw_gt):
                 "iscrowd": 0,
             }
             image_infos['annotations'].append(ann)
-            image_infos['categories'].add(
-                {'id': cat_[0], 'name': cat_[1]}
-            )
+            if cat_[0] in categories_:
+                continue
+            else:
+                categories_.append(cat_[0])
+                cat_info = {'id': cat_[0], 'name': cat_[1]}
+                image_infos['categories'].append(cat_info)
             ann_id += 1
-
-    image_infos['categories'] = list(image_infos['categories'])
+            
     return image_infos
 
 def create_cocogt(coco_format):

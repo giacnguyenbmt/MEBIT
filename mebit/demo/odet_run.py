@@ -132,6 +132,7 @@ def convert_output_function(predicted_sample):
 
 img = 'data/object_detection/000000162752.jpg'
 gt = 'data/object_detection/coco_trafficlight.json'
+
 option = ["blurring",
           "increasing_brightness",
           "increasing_contrast",
@@ -143,14 +144,14 @@ option = ["blurring",
 
 tlc = TLClassifier()
 
-foo = ODetEvaluation.from_input_path(img, gt)
+evaluator = ODetEvaluation.from_input_path(img, gt)
 
 for i in range(len(option)):
-    foo.stats(inference_function,
-              convert_output_function,
-              option[i],
-              'ap',
-              0.5,
-              "result_folder",
-              False,
-              verbose=True)
+    evaluator.stats(inference_function,
+                    convert_output_function,
+                    option[i],
+                    'ap_50',
+                    0.5,
+                    "result_folder",
+                    False,
+                    verbose=True)
