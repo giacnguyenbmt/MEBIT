@@ -1,3 +1,6 @@
+# file name
+# function
+# author, version
 import os
 import json
 
@@ -126,7 +129,7 @@ class ODetEvaluation(BaseEvaluation):
     def evaluate(self, gt, dt):
         # run evaluation
         with HiddenPrints():
-            cocoeval = COCOeval(gt, dt)
+            cocoeval = COCOeval(gt, dt, iouType="bbox")
             cocoeval.evaluate()
             cocoeval.accumulate()
             cocoeval.summarize()
@@ -156,7 +159,11 @@ class ODetEvaluation(BaseEvaluation):
 
         return gt
 
+    # 
     def format_dt(self, *args, **kwargs):
+        """
+        
+        """
         results = kwargs.get('results', None)
         gt = kwargs.get('gt', None)
         assert (None not in [results, gt]), "Lack arguments"
@@ -169,9 +176,9 @@ class ODetEvaluation(BaseEvaluation):
             for j, poly in enumerate(rs['boxes']):
                 instance_det = {
                     "image_id": img_id,
-                    "category_id": rs['classes'][j],
-                    "bbox": poly,
-                    "score": rs['scores'][j]
+                    "category_id": int(rs['classes'][j]),
+                    "bbox": poly.astype(float).tolist(),
+                    "score": float(rs['scores'][j])
                 }
                 dt_list.append(instance_det)
         with HiddenPrints():

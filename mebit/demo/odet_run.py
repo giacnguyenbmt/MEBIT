@@ -43,7 +43,7 @@ def load_graph():
 
     return detection_graph
 
-def select_boxes(boxes, classes, scores, score_threshold=0, target_class=10):
+def select_boxes(boxes, classes, scores, score_threshold=0.0, target_class=10):
     """
 
     :param boxes:
@@ -57,9 +57,11 @@ def select_boxes(boxes, classes, scores, score_threshold=0, target_class=10):
     sq_classes = np.squeeze(classes)
     sq_boxes = np.squeeze(boxes)
 
-    sel_id = np.logical_and(sq_classes == target_class, sq_scores > score_threshold)
+    # sel_id = np.logical_and(sq_classes == target_class, sq_scores > score_threshold)
+    sel_id = sq_scores > score_threshold
 
     return sq_boxes[sel_id], sq_scores[sel_id], sq_classes[sel_id]
+    # return sq_boxes, sq_classes, sq_boxes
 
 class TLClassifier(object):
     def __init__(self):
@@ -128,8 +130,8 @@ def convert_output_function(predicted_sample):
     return dt
 
 
-img = 'data/object_detection/input.png'
-gt = 'data/object_detection/instances_default.json'
+img = 'data/object_detection/000000162752.jpg'
+gt = 'data/object_detection/coco_trafficlight.json'
 option = ["blurring",
           "increasing_brightness",
           "increasing_contrast",
