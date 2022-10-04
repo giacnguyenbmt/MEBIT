@@ -245,7 +245,10 @@ class TDetEvaluation(BaseEvaluation):
         assert (data is not None), "Missing data argument"
 
         if self.option == 'crop':
-            coco_format = coco_util.albu_to_coco_dict(data, raw_gt)
+            coco_format = coco_util.tdet_albu_to_coco_dict(
+                    data, 
+                    raw_gt
+                )
             gt = coco_util.create_cocogt(coco_format)
 
         elif (self.option == "down_scale" 

@@ -56,7 +56,7 @@ def text_infos_to_coco_dict(img_path, gt, width, height):
     ]
     return image_infos
 
-def albu_to_coco_dict(data, raw_gt):
+def tdet_albu_to_coco_dict(data, raw_gt):
     image_infos = {
         'images': [],
         'annotations': [],
@@ -92,6 +92,62 @@ def albu_to_coco_dict(data, raw_gt):
     image_infos['categories'] = [
         {'id': 1, 'name': 'text'}
     ]
+    return image_infos
+
+def albu_to_coco_dict(data, raw_gt):
+    image_infos = {
+        'images': [],
+        'annotations': [],
+        'categories': set()
+    }
+    
+    ann_id = 1
+    for img_id, img in enumerate(data):
+        image_infos['images'].append(
+            {
+                'id': img_id + 1,
+                'width': img.shape[1],
+                'height': img.shape[0],
+                'file_name': None
+            }
+        )
+
+        for transformed_mask in raw_gt[img_id]['masks']:
+            mask_rle = mask.encode(np.asfortranarray(transformed_mask))
+            mask_rle['counts'] = mask_rle['counts'].decode('ascii')
+            ann = {
+                "id": ann_id,
+                "image_id": img_id + 1,
+                "category_id": 1,
+                "segmentation": mask_rle,
+                "area": float(mask.area(mask_rle)),
+                "bbox": mask.toBbox(mask_rle).tolist(),
+                "iscrowd": 0,
+            }
+            image_infos['annotations'].append(ann)
+            image_infos['categories'].add(
+                {'id': cat_[0], 'name': cat_[1]}
+            )
+            ann_id += 1
+
+        for transformed_bbox in raw_gt[img_id]['bboxes']:
+            bx, by, bh, bw, cat_ = transformed_bbox
+            ann = {
+                "id": ann_id,
+                "image_id": img_id + 1,
+                "category_id": cat_[0],
+                "area": round(bh * bw, 2),
+                "segmentation":[],
+                "bbox":[bx, by, bh, bw],
+                "iscrowd": 0,
+            }
+            image_infos['annotations'].append(ann)
+            image_infos['categories'].add(
+                {'id': cat_[0], 'name': cat_[1]}
+            )
+            ann_id += 1
+
+    image_infos['categories'] = list(image_infos['categories'])
     return image_infos
 
 def create_cocogt(coco_format):

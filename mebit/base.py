@@ -735,8 +735,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                     )
 
                     metric = self.evaluate(gt, dt)
-                    print(gt, dt)
-                    print(metric)
 
                     # logging if model fails
                     if self.check(metric, threshold, criterion) is False:
