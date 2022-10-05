@@ -30,7 +30,11 @@ Command to run the evaluation process with bellow option:
 - "crop"
 
 ```bash
-rm -rf result_folder && python -m mebit.demo.trafficlight_classification.trafficlight_evaluation data/test_tflight_overal/img/ data/test_tflight_overal/gt/ "" "result_folder"
+rm -rf result_folder && python -m \
+mebit.demo.trafficlight_classification.trafficlight_evaluation \
+data/test_tflight_overal/img/ \
+data/test_tflight_overal/gt/ \
+"" "result_folder"
 ```
 
 Command to run the evaluation process with bellow option:
@@ -44,7 +48,11 @@ Command to run the evaluation process with bellow option:
 - "crop"
 
 ```bash
-rm -rf rc_result_folder && python -m mebit.demo.trafficlight_classification.trafficlight_evaluation data/rotation_compactness_lisa_data/image/ data/rotation_compactness_lisa_data/gt/ "" "rc_result_folder"
+rm -rf rc_result_folder && python -m \
+mebit.demo.trafficlight_classification.trafficlight_evaluation \
+data/rotation_compactness_lisa_data/image/ \
+data/rotation_compactness_lisa_data/gt/ \
+"" "rc_result_folder"
 ```
 
 `Results are stored in "result_folder" and "rc_result_folder"`
