@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 import glob
@@ -6,8 +5,8 @@ import os
 import sys
 import json
 
-from trafficlight import TrafficLight
-from MEBIT import ClsfEvaluation
+from .trafficlight import TrafficLight
+from ...classification import ClsfEvaluation
 
 option = [
     "left_rotation",
@@ -35,7 +34,7 @@ if __name__ == "__main__":
     result_folder = sys.argv[4]
 
     trafficlight = TrafficLight()
-    trafficlight.load_model('trafficlight.onnx')
+    trafficlight.load_model('./model/trafficlight.onnx')
     df = pd.DataFrame(columns = ["image"] + option)
 
     image_list = glob.glob(os.path.join(image_dir, "*." + image_type))
