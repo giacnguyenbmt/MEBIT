@@ -3,7 +3,7 @@ import os
 from mmocr.utils.ocr import MMOCR
 import cv2
 
-from ..text_detection import TDetEvaluation
+from ...text_detection import TDetEvaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)

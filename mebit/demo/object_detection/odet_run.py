@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from ..object_detection import ODetEvaluation
+from ...object_detection import ODetEvaluation
 
 BOX_COLOR = (255, 0, 0) # Red
 TEXT_COLOR = (255, 255, 255) # White

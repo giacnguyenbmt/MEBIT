@@ -5,7 +5,7 @@ from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 import cv2
 
-from ..text_recognition import TRecogEvaluation
+from ...text_recognition import TRecogEvaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
