@@ -114,26 +114,26 @@ def albu_to_coco_dict(data, raw_gt):
             }
         )
 
-        for transformed_mask in raw_gt[img_id]['masks']:
-            mask_rle = mask.encode(np.asfortranarray(transformed_mask))
-            mask_rle['counts'] = mask_rle['counts'].decode('ascii')
-            ann = {
-                "id": ann_id,
-                "image_id": img_id + 1,
-                "category_id": 1,
-                "segmentation": mask_rle,
-                "area": float(mask.area(mask_rle)),
-                "bbox": mask.toBbox(mask_rle).tolist(),
-                "iscrowd": 0,
-            }
-            image_infos['annotations'].append(ann)
-            if cat_[0] in categories_:
-                continue
-            else:
-                categories_.append(cat_[0])
-                cat_info = {'id': cat_[0], 'name': cat_[1]}
-                image_infos['categories'].append(cat_info)
-            ann_id += 1
+        # for transformed_mask in raw_gt[img_id]['masks']:
+        #     mask_rle = mask.encode(np.asfortranarray(transformed_mask))
+        #     mask_rle['counts'] = mask_rle['counts'].decode('ascii')
+        #     ann = {
+        #         "id": ann_id,
+        #         "image_id": img_id + 1,
+        #         "category_id": 1,
+        #         "segmentation": mask_rle,
+        #         "area": float(mask.area(mask_rle)),
+        #         "bbox": mask.toBbox(mask_rle).tolist(),
+        #         "iscrowd": 0,
+        #     }
+        #     ann_id += 1
+        #     image_infos['annotations'].append(ann)
+        #     if cat_[0] in categories_:
+        #         continue
+        #     else:
+        #         categories_.append(cat_[0])
+        #         cat_info = {'id': cat_[0], 'name': cat_[1]}
+        #         image_infos['categories'].append(cat_info)
 
         for transformed_bbox in raw_gt[img_id]['bboxes']:
             bx, by, bh, bw, cat_ = transformed_bbox
@@ -146,6 +146,7 @@ def albu_to_coco_dict(data, raw_gt):
                 "bbox":[bx, by, bh, bw],
                 "iscrowd": 0,
             }
+            ann_id += 1
             image_infos['annotations'].append(ann)
             if cat_[0] in categories_:
                 continue
@@ -153,7 +154,6 @@ def albu_to_coco_dict(data, raw_gt):
                 categories_.append(cat_[0])
                 cat_info = {'id': cat_[0], 'name': cat_[1]}
                 image_infos['categories'].append(cat_info)
-            ann_id += 1
             
     return image_infos
 
