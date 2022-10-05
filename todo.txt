@@ -4,3 +4,6 @@ Add color option to left/right rotation
 Naming image when there is not input_path
 Add hard compactness test following Mr.Tung instruction
 Add contrast_limit-type option
+
+===============
+describe module, function, class, method, argument
