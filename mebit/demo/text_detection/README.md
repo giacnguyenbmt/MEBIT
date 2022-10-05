@@ -38,5 +38,5 @@ pip install -r MEBIT/requirements.txt
 Command to run the evaluation process:
 
 ```bash
-rm -rf result_folder && python -m mebit.demo.text_detection.tdet_run
+rm -rf result_folder && python -m MEBIT.mebit.demo.text_detection.tdet_run
 ```

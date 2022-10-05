@@ -35,7 +35,7 @@ if __name__ == "__main__":
     result_folder = sys.argv[4]
 
     trafficlight = TrafficLight()
-    trafficlight.load_model('./model/trafficlight.onnx')
+    trafficlight.load_model('mebit/demo/trafficlight_classification/model/trafficlight.onnx')
     df = pd.DataFrame(columns = ["image"] + option)
 
     image_list = glob.glob(os.path.join(image_dir, "*." + image_type))
@@ -44,8 +44,9 @@ if __name__ == "__main__":
 
     for i, image in enumerate(image_list):
         result_storage[image] = {}
+        file_name_ = os.path.split(image)[-1]
         gt_name = os.path.join(gt_dir, 
-                               os.path.split(image)[-1][:-len(image_type)] + 'txt')
+                               os.path.splitext(file_name_)[0] + '.txt')
         evaluation = ClsfEvaluation.from_input_path(img_path=image, gt_path=gt_name, image_color='bgr')
 
 

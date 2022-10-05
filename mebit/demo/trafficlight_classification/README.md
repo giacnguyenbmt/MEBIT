@@ -14,7 +14,7 @@ Download datasets to test the traffic light classfication model.
 gdown 1treeleluT9bcC4VIaYIbBmsDBIMNPdpA
 unzip -q -d ./data rotation_compactness_lisa_data.zip
 gdown 1FgIOZYCTPMnrndPJQVjtI_XtScH7X1rT
-uznip -q -d ./data test_tflight_overal.zip
+unzip -q -d ./data test_tflight_overal.zip
 ```
 
 ## Usage
@@ -34,7 +34,7 @@ rm -rf result_folder && python -m \
 mebit.demo.trafficlight_classification.trafficlight_evaluation \
 data/test_tflight_overal/img/ \
 data/test_tflight_overal/gt/ \
-"" "result_folder"
+"*" "result_folder"
 ```
 
 Command to run the evaluation process with bellow option:
@@ -49,10 +49,10 @@ Command to run the evaluation process with bellow option:
 
 ```bash
 rm -rf rc_result_folder && python -m \
-mebit.demo.trafficlight_classification.trafficlight_evaluation \
+mebit.demo.trafficlight_classification.trafficlight_rc_evaluation \
 data/rotation_compactness_lisa_data/image/ \
 data/rotation_compactness_lisa_data/gt/ \
-"" "rc_result_folder"
+"*" "rc_result_folder"
 ```
 
 `Results are stored in "result_folder" and "rc_result_folder"`

@@ -67,5 +67,4 @@ foo.stats(inference_function,
           'precision',
           0.5,
           'result_folder',
-          True,
           verbose=True)

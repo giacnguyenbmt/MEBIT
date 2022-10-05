@@ -5,7 +5,7 @@ import copy
 import cv2
 import numpy as np
 
-from mebit.utils import util
+from .utils import util
 
 from .metrics import rrc_evaluation_funcs_1_1 as rrc_evaluation_funcs
 from .transforms import definded_transforms as trans

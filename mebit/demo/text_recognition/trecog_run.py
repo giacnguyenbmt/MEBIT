@@ -49,5 +49,4 @@ for i in range(len(option)):
               'accuracy',
               0.5,
               "result_folder",
-              True,
               verbose=True)

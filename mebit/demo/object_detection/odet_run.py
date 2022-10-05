@@ -153,5 +153,4 @@ for i in range(len(option)):
                     'ap_50',
                     0.5,
                     "result_folder",
-                    False,
                     verbose=True)
