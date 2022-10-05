@@ -181,6 +181,16 @@ class ODetEvaluation(BaseEvaluation):
                     "score": float(rs['scores'][j])
                 }
                 dt_list.append(instance_det)
+
+        if len(dt_list) == 0:
+            empty_det = {
+                "image_id": gt.dataset['images'][0]['id'],
+                "category_id": 1,
+                "bbox": [0, 0, 1, 1],
+                "score": 0.5
+            }
+            dt_list.append(empty_det)
+
         with HiddenPrints():
             dt = gt.loadRes(dt_list)
             dt.dt_list = dt_list
