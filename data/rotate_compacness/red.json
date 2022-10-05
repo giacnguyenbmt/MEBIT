@@ -1,0 +1,33 @@
+{
+    "images": [
+        {
+            "file_name": "red.jpg",
+            "height": 827,
+            "width": 1200,
+            "id": 0
+        }
+    ],
+    "categories": [
+        {
+            "supercategory": "Defect",
+            "id": 1,
+            "name": "r"
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 0,
+            "bbox": [
+                961.0,
+                470.0,
+                27.0,
+                73.0
+            ],
+            "area": 1971,
+            "iscrowd": 0,
+            "category_id": 1,
+            "segmentation": []
+        }
+    ]
+}

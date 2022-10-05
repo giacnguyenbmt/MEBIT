@@ -1,0 +1,33 @@
+{
+    "images": [
+        {
+            "file_name": "green.jpg",
+            "height": 1111,
+            "width": 1500,
+            "id": 0
+        }
+    ],
+    "categories": [
+        {
+            "supercategory": "Defect",
+            "id": 1,
+            "name": "g"
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 0,
+            "bbox": [
+                501.0,
+                368.0,
+                52.0,
+                114.0
+            ],
+            "area": 5928,
+            "iscrowd": 0,
+            "category_id": 1,
+            "segmentation": []
+        }
+    ]
+}

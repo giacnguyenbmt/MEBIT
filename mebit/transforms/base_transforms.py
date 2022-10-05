@@ -1,6 +1,6 @@
-import random
-from albumentations.core.transforms_interface import DualTransform
+import numpy as np
 
+from albumentations.core.transforms_interface import DualTransform
 from albumentations.augmentations.geometric import functional as F
 
 class Rotate90(DualTransform):

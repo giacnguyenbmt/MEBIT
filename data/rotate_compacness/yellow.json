@@ -1,0 +1,33 @@
+{
+    "images": [
+        {
+            "file_name": "yellow.jpg",
+            "height": 1800,
+            "width": 1200,
+            "id": 0
+        }
+    ],
+    "categories": [
+        {
+            "supercategory": "Defect",
+            "id": 1,
+            "name": "y"
+        }
+    ],
+    "annotations": [
+        {
+            "id": 1,
+            "image_id": 0,
+            "bbox": [
+                620.0,
+                431.0,
+                57.0,
+                140.0
+            ],
+            "area": 7980,
+            "iscrowd": 0,
+            "category_id": 1,
+            "segmentation": []
+        }
+    ]
+}

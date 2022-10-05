@@ -5,7 +5,7 @@ from vietocr.tool.predictor import Predictor
 from vietocr.tool.config import Cfg
 import cv2
 
-from ..metrics import Evaluation
+from ...text_recognition import TRecogEvaluation
 
 def inference_function(input):
     img = cv2.cvtColor(input, cv2.COLOR_RGB2BGR)
@@ -21,15 +21,16 @@ def convert_output_function(predicted_sample):
     # print(predicted_sample)
     return predicted_sample
 
-img = 'data/word_1.png'
-gt = 'data/treg_gt.txt'
+img = 'data/text_recognition/word_1.png'
+gt = 'data/text_recognition/treg_gt.txt'
 option = ["blurring",
           "increasing_brightness",
           "increasing_contrast",
           "decreasing_brightness",
           "decreasing_contrast",
           "down_scale",
-          "crop"]
+          "crop",
+          "rotate90",]
 
 config = Cfg.load_config_from_name('vgg_transformer')
 config['weights'] = 'https://drive.google.com/uc?id=13327Y1tz1ohsm5YZMyXVMPIOjoOA0OaA'
@@ -39,12 +40,14 @@ config['predictor']['beamsearch']=False
 
 detector = Predictor(config)
 
-foo = Evaluation(img, gt)
+foo = TRecogEvaluation.from_input_path(img, gt)
 
 for i in range(len(option)):
-    foo.trecog_stats(inference_function, 
-                    convert_output_function, 
-                    option[i],
-                    'accuracy',
-                    0.5,
-                    verbose=True)
+    foo.stats(inference_function,
+              convert_output_function,
+              option[i],
+              'accuracy',
+              0.5,
+              "result_folder",
+              True,
+              verbose=True)
