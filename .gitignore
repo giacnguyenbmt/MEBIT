@@ -133,3 +133,4 @@ dmypy.json
 # tdet_run.py
 # treg_run.py
 __process.py
+*result*/
