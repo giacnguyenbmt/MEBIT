@@ -4,4 +4,4 @@ pycocotools
 scikit-learn
 numpy
 opencv-python
-albumentations
+albumentations==1.3.0
