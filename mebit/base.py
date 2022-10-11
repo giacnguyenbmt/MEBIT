@@ -30,84 +30,84 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.data = data
         self.gt = gt
         self.image_color = image_color
-        self.height, self.width, _ = self.data.shape
+        # self.height, self.width, _ = self.data.shape
         self.img_path = util.create_random_name()
         self.gt_path = None
 
         self.report = {
             "blurring": {
                 'message': 'blur_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_blurring(),
                 'type': 1
             },
             "increasing_brightness": {
                 'message': 'brightness_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_brightness(),
                 'type': 1
             },
             "increasing_contrast": {
                 'message': 'contrast_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_contrast(),
                 'type': 1
             },
             "decreasing_brightness": {
                 'message': 'brightness_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_brightness(),
                 'type': 1
             },
             "decreasing_contrast": {
                 'message': 'contrast_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_contrast(),
                 'type': 1
             },
             "down_scale": {
                 'message': 'max_ratio',
-                'storage': self._init_store_option_data(1., 0),
+                'status': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_scale(),
                 'type': 1
             },
             "crop": {
                 'message': 'alpha',
-                'storage': self._init_store_option_data(1., 0),
+                'status': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_crop(),
                 'type': 2
             },
             "rotate90": {
                 'message': 'num_image',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_rotate_90(),
                 'type': 4
             },
             "left_rotation": {
                 'message': 'rotation_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_left_rotation(),
                 'type': 3
             },
             "right_rotation": {
                 'message': 'rotation_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'lower is better',
                 'generator': self.test_right_rotation(),
                 'type': 3
             },
             "compactness": {
                 'message': 'compacness_limit',
-                'storage': self._init_store_option_data(1.0, 0),
+                'status': self._init_store_option_data(1.0, 0),
                 'note': 'lower is better',
                 'generator': self.test_compactness(),
                 'type': 3
@@ -552,15 +552,15 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
     def update_report(self, option):
         if  self.report[option]['type'] == 4:
-            self.report[option]['storage']['last']['value'] += 1
+            self.report[option]['status']['last']['value'] += 1
         else:
-            self.report[option]['storage']['last']['value'] = self.limit
+            self.report[option]['status']['last']['value'] = self.limit
 
     def make_report(self, option, verbose=True):
         option_ = self.report[option]
         _mess = option_['message']
         _note = option_['note']
-        _value = option_['storage']['last']['value']
+        _value = option_['status']['last']['value']
         message = "{}: \n{} = {} \n({})".format(option,
                                                 _mess,
                                                 _value,
@@ -603,6 +603,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
     #========================Process=======================
     def preprocess_input(self):
         # set param
+        self.height, self.width, _ = self.data.shape
         self.stop_generator = False
         self.stop_type_4 = False
 
