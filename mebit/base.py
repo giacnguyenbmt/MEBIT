@@ -757,6 +757,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
               threshold=0.5,
               result_image_path=None,
               save_all_tested_images=False,
+              get_not_stated_record=False,
               verbose=False):
         """
         Parameter:
@@ -769,6 +770,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.option = option
         self.result_image_path = result_image_path
         self.save_all_tested_images = save_all_tested_images
+        self.get_not_stated_record = get_not_stated_record
 
         self.test_transformation(
             inference_function,
