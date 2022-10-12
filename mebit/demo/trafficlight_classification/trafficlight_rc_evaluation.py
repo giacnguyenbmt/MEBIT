@@ -4,6 +4,7 @@ import glob
 import os
 import sys
 import json
+import time
 
 from .trafficlight import TrafficLight
 from ...classification import ClsfEvaluation
@@ -32,6 +33,8 @@ if __name__ == "__main__":
     gt_dir = sys.argv[2]
     image_type = sys.argv[3]
     result_folder = sys.argv[4]
+
+    start_time = time.time()
 
     trafficlight = TrafficLight()
     trafficlight.load_model('mebit/demo/trafficlight_classification/model/trafficlight.onnx')
@@ -71,4 +74,7 @@ if __name__ == "__main__":
     json_data = json.dumps(result_storage, indent=4)
     with open(os.path.join(result_folder, 'json_result.json'), 'w') as file:
         file.write(json_data)
+        
     print(df)
+
+    print("--- %s seconds ---" % (time.time() - start_time))
