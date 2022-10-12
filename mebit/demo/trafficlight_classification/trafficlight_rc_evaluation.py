@@ -70,11 +70,11 @@ if __name__ == "__main__":
 
         df = pd.concat([df, pd.DataFrame.from_records([new_record])], ignore_index=True)
 
-    df.to_csv(os.path.join(result_folder, "result.csv"))
+    df.to_csv(os.path.join(result_folder, "result.csv"), index=False)
     json_data = json.dumps(result_storage, indent=4)
     with open(os.path.join(result_folder, 'json_result.json'), 'w') as file:
         file.write(json_data)
-        
+
     print(df)
 
     print("--- %s seconds ---" % (time.time() - start_time))
