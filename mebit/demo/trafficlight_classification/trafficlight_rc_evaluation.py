@@ -61,6 +61,7 @@ if __name__ == "__main__":
                                       "accuracy",
                                       0.5,
                                       result_folder,
+                                      get_not_stated_point=True,
                                       verbose=True)
             new_record[opt] = result['value']
 
