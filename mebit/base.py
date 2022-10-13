@@ -267,7 +267,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            if ratio <= 0.1 or min(data[0].shape[:2]) < 3:
+            print(data[0].shape[:2], min(data[0].shape[:2]))
+            if ratio <= 0.1 or min(data[0].shape[:2]) < 6:
                 print("Reached the limit of the down-scale test!")
                 self.stop_generator = True
 
@@ -319,7 +320,8 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            if denominator >= 15:
+            if denominator >= 15 or min([min(data[i].shape[:2]) 
+                                         for i in range(len(data))]) < 4:
                 print("Reached the limit of the crop test!")
                 self.stop_generator = True
     
