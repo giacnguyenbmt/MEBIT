@@ -117,8 +117,6 @@ def get_label_at_limit(df, idx, unique_limit, result_dir, opt):
             dt_bool.append(True)
         else:
             dt_bool.append(False)
-    
-    print(sum(dt_bool))
 
     for i in range(len(df)):
         record_ = df.iloc[i]
@@ -209,7 +207,7 @@ for i in range(len(option_list)):
     opt = option_list[i]
     mess_ = instance_.report[opt]['note']
     if i < 6:
-        continue
+        # continue
         new_column_name = opt + " status"
         df_first[new_column_name] = check_pass(df_first, opt, os.path.join(result_dir, "images"))
         plot_stats(df_first, opt, X_LABEL[i], LIM, mess_)
