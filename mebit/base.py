@@ -267,7 +267,6 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            print(data[0].shape[:2], min(data[0].shape[:2]))
             if ratio <= 0.1 or min(data[0].shape[:2]) < 6:
                 print("Reached the limit of the down-scale test!")
                 self.stop_generator = True

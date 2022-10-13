@@ -1,4 +1,5 @@
 import pandas as pd
+import cv2
 
 import glob
 import os
@@ -52,6 +53,9 @@ if __name__ == "__main__":
                                os.path.splitext(file_name_)[0] + '.txt')
         evaluation = ClsfEvaluation.from_input_path(img_path=image, gt_path=gt_name, image_color='bgr')
 
+        img = cv2.imread(image)
+        if min(img.shape[:2]) < 3:
+            continue
 
         new_record = {"image": image}
         for opt in option:
