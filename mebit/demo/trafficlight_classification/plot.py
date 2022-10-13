@@ -165,11 +165,11 @@ def calculate_metric_by_limit(df, opt, result_dir, eval_func, ascending=True):
 
 
 LIM = {
-    # 'blurring': 
+    'blurring': [0, 215],
     'increasing_brightness': [0.0, 1.0],
     'increasing_contrast': [0.0, 255.0],
     'decreasing_brightness': [0, -1],
-    'decreasing_contrast': [0, -1],
+    'decreasing_contrast': [0, -255.0],
     'down_scale': [1.0, 0.0],
     'crop': [5/5, 5/16],
     'left_rotation': [0, 45],
@@ -177,6 +177,7 @@ LIM = {
     'compactness': [1.0, 0],
 }
 X_LABEL = [
+    'blurring limit',
     'brightness limit',
     'contrast limit',
     'brightness limit',
@@ -206,9 +207,9 @@ print("num image x limit")
 for i in range(len(option_list)):
     opt = option_list[i]
     mess_ = instance_.report[opt]['note']
-    if i < 6:
-        # continue
+    if i < 7:
         new_column_name = opt + " status"
+        print(opt, X_LABEL[i], LIM[opt])
         df_first[new_column_name] = check_pass(df_first, opt, os.path.join(result_dir, "images"))
         plot_stats(df_first, opt, X_LABEL[i], LIM, mess_)
     else:
@@ -218,7 +219,7 @@ for i in range(len(option_list)):
 
 print("metric x limit")
 for i in range(len(option_list)):
-    if i < 6:
+    if i < 7:
         continue
     # if i < 8:
     #     continue
