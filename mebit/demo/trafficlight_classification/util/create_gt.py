@@ -4,13 +4,10 @@ import sys
 import os
 import glob
 
-import matplotlib.pyplot as plt
-
 import cv2
 
 if __name__ == "__main__":
     image_dir = sys.argv[1]
-    # image_type = sys.argv[2]
     
     image_list = glob.glob(os.path.join(image_dir, '*'))
 
