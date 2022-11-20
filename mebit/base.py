@@ -30,93 +30,95 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.data = data
         self.gt = gt
         self.image_color = image_color
-        self.height, self.width, _ = self.data.shape
+        # self.height, self.width, _ = self.data.shape
         self.img_path = util.create_random_name()
         self.gt_path = None
 
         self.report = {
             "blurring": {
                 'message': 'blur_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_blurring(),
                 'type': 1
             },
             "increasing_brightness": {
                 'message': 'brightness_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_brightness(),
                 'type': 1
             },
             "increasing_contrast": {
                 'message': 'contrast_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'higher is better',
                 'generator': self.test_increasing_contrast(),
                 'type': 1
             },
             "decreasing_brightness": {
                 'message': 'brightness_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_brightness(),
                 'type': 1
             },
             "decreasing_contrast": {
                 'message': 'contrast_limit',
-                'storage': self._init_store_option_data(0., 0),
+                'status': self._init_store_option_data(0., 0),
                 'note': 'lower is better',
                 'generator': self.test_decreasing_contrast(),
                 'type': 1
             },
             "down_scale": {
                 'message': 'max_ratio',
-                'storage': self._init_store_option_data(1., 0),
+                'status': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_scale(),
                 'type': 1
             },
             "crop": {
                 'message': 'alpha',
-                'storage': self._init_store_option_data(1., 0),
+                'status': self._init_store_option_data(1., 0),
                 'note': 'lower is better',
                 'generator': self.test_crop(),
                 'type': 2
             },
             "rotate90": {
                 'message': 'num_image',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_rotate_90(),
                 'type': 4
             },
             "left_rotation": {
                 'message': 'rotation_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'higher is better',
                 'generator': self.test_left_rotation(),
                 'type': 3
             },
             "right_rotation": {
                 'message': 'rotation_limit',
-                'storage': self._init_store_option_data(0, 0),
+                'status': self._init_store_option_data(0, 0),
                 'note': 'lower is better',
                 'generator': self.test_right_rotation(),
                 'type': 3
             },
             "compactness": {
                 'message': 'compacness_limit',
-                'storage': self._init_store_option_data(1.0, 0),
+                'status': self._init_store_option_data(1.0, 0),
                 'note': 'lower is better',
                 'generator': self.test_compactness(),
                 'type': 3
             }
         }
 
+
     @classmethod
     def get_available_option(cls):
         return cls.valid_option_list
+
 
     def _init_store_option_data(self, init_value=0, init_score=0):
         option_data = {
@@ -137,6 +139,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         }
         return option_data
     
+
     #======================================================
     #==============split transformation test===============
     def test_blurring(self, *args, **kwargs):
@@ -158,6 +161,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the blurring test!")
                 self.stop_generator = True
 
+
     def test_increasing_brightness(self, *args, **kwargs):
         brightness_limit = 0
         while True:
@@ -176,6 +180,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             if brightness_limit >= 1.0:
                 print("Reached the limit of the brightness test!")
                 self.stop_generator = True
+
 
     def test_increasing_contrast(self, *args, **kwargs):
         contrast_limit = 0
@@ -199,6 +204,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
+
     def test_decreasing_brightness(self, *args, **kwargs):
         brightness_limit = 0
         while True:
@@ -217,6 +223,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             if brightness_limit <= -1.0:
                 print("Reached the limit of the brightness test!")
                 self.stop_generator = True
+
 
     def test_decreasing_contrast(self, *args, **kwargs):
         contrast_limit = 0
@@ -240,6 +247,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the contrast test!")
                 self.stop_generator = True
 
+
     def test_scale(self, *args, **kwargs):
         ratio = 0.9
         while True:
@@ -259,9 +267,10 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            if ratio <= 0.1 or min(data[0].shape[:2]) < 3:
+            if ratio <= 0.1 or min(data[0].shape[:2]) < 6:
                 print("Reached the limit of the down-scale test!")
                 self.stop_generator = True
+
 
     def test_crop(self, *args, **kwargs):
         # crop 9 parts of image according alpha
@@ -310,10 +319,12 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
             yield data, raw_gt
 
-            if denominator >= 15:
+            if denominator >= 15 or min([min(data[i].shape[:2]) 
+                                         for i in range(len(data))]) < 4:
                 print("Reached the limit of the crop test!")
                 self.stop_generator = True
     
+
     def test_rotate_90(self, flip=False, *args, **kwargs):
         while True:
             data = []
@@ -353,6 +364,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
                 yield data, raw_gt
 
+
     def test_left_rotation(self, color=None, *args, **kwargs):
         rotation_limit = 0
         while True:
@@ -381,6 +393,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the left rotation test!")
                 self.stop_generator = True
     
+
     def test_right_rotation(self, *args, **kwargs):
         rotation_limit = 0
         while True:
@@ -409,6 +422,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the right rotation test!")
                 self.stop_generator = True
 
+
     def test_compactness(self, *args, **kwargs):
         compacness_limit = 1.0
         raw_data = self.data
@@ -432,6 +446,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 print("Reached the limit of the compactness test!")
                 self.stop_generator = True
 
+
     #======================================================
     #==================Log and report======================
     def backup_data(self, data, gt, dt):
@@ -439,12 +454,14 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.penultimate_gt = gt
         self.penultimate_dt = dt
 
+
     def save_image(self, name, image):
         if self.image_color == 'rgb':
             new_img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         else:
             new_img = image
         cv2.imwrite(name, new_img)
+
 
     def save_images(self, data, type_data='deadpoint'):
         # store name of saved images
@@ -482,6 +499,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                 img_names.append(_new_name)
         return img_names
 
+
     def save_tested_image(self, img):
         self.counter += 1
         if self.save_all_tested_images is False:
@@ -506,14 +524,28 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         return True
 
+
     @abc.abstractmethod
     def save_gt(self, gt, img_names):
         ...
     
+
     @abc.abstractmethod
     def save_dt(self, dt, img_names):
         ...
     
+
+    def log_not_started_point(self, data, gt, dt):
+        if self.result_image_path is None:
+            return
+        if self.get_not_stated_point is False:
+            return
+        
+        img_names = self.save_images(data, type_data='not-started')
+        self.save_gt(gt, img_names)
+        self.save_dt(dt, img_names)
+
+
     def log(self, data, gt, dt, metric=None):
         if self.result_image_path is None:
             return
@@ -550,17 +582,19 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
             self.save_gt(gt, img_names)
             self.save_dt(dt, img_names)
 
+
     def update_report(self, option):
         if  self.report[option]['type'] == 4:
-            self.report[option]['storage']['last']['value'] += 1
+            self.report[option]['status']['last']['value'] += 1
         else:
-            self.report[option]['storage']['last']['value'] = self.limit
+            self.report[option]['status']['last']['value'] = self.limit
+
 
     def make_report(self, option, verbose=True):
         option_ = self.report[option]
         _mess = option_['message']
         _note = option_['note']
-        _value = option_['storage']['last']['value']
+        _value = option_['status']['last']['value']
         message = "{}: \n{} = {} \n({})".format(option,
                                                 _mess,
                                                 _value,
@@ -578,12 +612,14 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         return return_dict
 
+
     #======================================================
     #===============Metrics and condition==================
     @abc.abstractmethod
     def evaluate(self, gt, dt):
         metric = None
         return metric
+
 
     def check(self, metrics, threshold, criterion="precision"):
         self.test_failed = True
@@ -599,10 +635,12 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         return True
 
+
     #======================================================
     #========================Process=======================
     def preprocess_input(self):
         # set param
+        self.height, self.width, _ = self.data.shape
         self.stop_generator = False
         self.stop_type_4 = False
 
@@ -618,9 +656,11 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         self.height, self.width, _ = self.data.shape
     
+
     def get_generator(self, option):
         return self.report.get(option).get('generator')
     
+
     @abc.abstractmethod
     def create_original_input(self):
         # format dt
@@ -628,6 +668,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         # format gt
         gt = self.gt
         return data, gt
+
 
     def create_input(self, image_generator):
         """
@@ -640,10 +681,12 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         gt = self.format_transformed_gt(raw_gt, data=data)
         return data, gt
 
+
     @abc.abstractmethod
     def format_transformed_gt(self, *args, **kwargs):
         gt = None
         return gt
+
 
     def fit(self, inference_function, convert_output_function, data, gt):
         # get result from model
@@ -661,10 +704,12 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         return dt
 
+
     @abc.abstractmethod
     def format_dt(self, *args, **kwargs):
         dt = None
         return dt
+
 
     def test_transformation(self,
                             inference_function,
@@ -692,7 +737,10 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
 
         # STEP 3: RUN TEST WITH CORRESPONDING OPTION
         # if model fails in evaluation of the original image, stop testing
-        if self.check(metric, threshold, criterion):
+        if not self.check(metric, threshold, criterion):
+            self.log_not_started_point(data, gt, dt)
+            
+        elif self.check(metric, threshold, criterion):
             # Get the corresponding generator
             image_generator = self.get_generator(option)
 
@@ -746,6 +794,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
                     if self.stop_type_4 is True:
                         break
 
+
     #======================================================
     #====================Main function=====================
     def stats(self,
@@ -756,6 +805,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
               threshold=0.5,
               result_image_path=None,
               save_all_tested_images=False,
+              get_not_stated_point=False,
               verbose=False):
         """
         Parameter:
@@ -768,6 +818,7 @@ class BaseEvaluation(metaclass=abc.ABCMeta):
         self.option = option
         self.result_image_path = result_image_path
         self.save_all_tested_images = save_all_tested_images
+        self.get_not_stated_point = get_not_stated_point
 
         self.test_transformation(
             inference_function,

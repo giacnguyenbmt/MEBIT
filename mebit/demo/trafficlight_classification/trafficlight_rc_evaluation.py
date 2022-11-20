@@ -4,6 +4,7 @@ import glob
 import os
 import sys
 import json
+import time
 
 from .trafficlight import TrafficLight
 from ...classification import ClsfEvaluation
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     image_type = sys.argv[3]
     result_folder = sys.argv[4]
 
+    start_time = time.time()
+
     trafficlight = TrafficLight()
     trafficlight.load_model('mebit/demo/trafficlight_classification/model/trafficlight.onnx')
     df = pd.DataFrame(columns = ["image"] + option)
@@ -61,13 +64,17 @@ if __name__ == "__main__":
                                       "accuracy",
                                       0.5,
                                       result_folder,
+                                      get_not_stated_point=True,
                                       verbose=True)
             new_record[opt] = result['value']
 
         df = pd.concat([df, pd.DataFrame.from_records([new_record])], ignore_index=True)
 
-    df.to_csv(os.path.join(result_folder, "result.csv"))
+    df.to_csv(os.path.join(result_folder, "result.csv"), index=False)
     json_data = json.dumps(result_storage, indent=4)
     with open(os.path.join(result_folder, 'json_result.json'), 'w') as file:
         file.write(json_data)
+
     print(df)
+
+    print("--- %s seconds ---" % (time.time() - start_time))

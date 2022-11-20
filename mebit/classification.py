@@ -94,9 +94,9 @@ class ClsfEvaluation(BaseEvaluation):
     def evaluate(self, gt, dt):
         metric = {
             "accuracy": accuracy_score(gt, dt),
-            "precision": precision_score(gt, dt, average='micro'),
-            "recall": recall_score(gt, dt, average='micro'),
-            "f1": f1_score(gt, dt, average='micro')
+            "precision": precision_score(gt, dt, average='weighted', zero_division=0),
+            "recall": recall_score(gt, dt, average='weighted', zero_division=0),
+            "f1": f1_score(gt, dt, average='weighted', zero_division=0)
         }
         return metric
 

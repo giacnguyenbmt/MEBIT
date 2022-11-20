@@ -1,9 +1,11 @@
 import pandas as pd
+import cv2
 
 import glob
 import os
 import sys
 import json
+import time
 
 from .trafficlight import TrafficLight
 from ...classification import ClsfEvaluation
@@ -34,6 +36,8 @@ if __name__ == "__main__":
     image_type = sys.argv[3]
     result_folder = sys.argv[4]
 
+    start_time = time.time()
+
     trafficlight = TrafficLight()
     trafficlight.load_model('mebit/demo/trafficlight_classification/model/trafficlight.onnx')
     df = pd.DataFrame(columns = ["image"] + option)
@@ -49,24 +53,29 @@ if __name__ == "__main__":
                                os.path.splitext(file_name_)[0] + '.txt')
         evaluation = ClsfEvaluation.from_input_path(img_path=image, gt_path=gt_name, image_color='bgr')
 
+        img = cv2.imread(image)
+        if min(img.shape[:2]) < 3:
+            continue
 
         new_record = {"image": image}
         for opt in option:
             result = evaluation.stats(inference_function, 
-                                           convert_function,
-                                           opt,
-                                           "accuracy",
-                                           0.5,
-                                           result_folder,
-                                           verbose=False)
+                                      convert_function,
+                                      opt,
+                                      "accuracy",
+                                      0.5,
+                                      result_folder,
+                                      get_not_stated_point=True,
+                                      verbose=False)
             new_record[opt] = result['value']
 
         df = pd.concat([df, pd.DataFrame.from_records([new_record])], ignore_index=True)
 
-    df.to_csv(os.path.join(result_folder, "result.csv"))
+    df.to_csv(os.path.join(result_folder, "result.csv"), index=False)
     json_data = json.dumps(result_storage, indent=4)
     with open(os.path.join(result_folder, 'json_result.json'), 'w') as file:
         file.write(json_data)
+        
     print(df)
 
-
+    print("--- %s seconds ---" % (time.time() - start_time))
